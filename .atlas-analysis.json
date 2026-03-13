@@ -1,0 +1,83 @@
+{
+  "projectType": "saas",
+  "projectName": "Astro Services",
+  "projectDescription": "Full-stack platform for managing and selling streaming and IPTV services with dynamic pricing and discounts.",
+  "theme": "palm",
+  "primaryColor": "#7C3AED",
+  "lightColor": "#A78BFA",
+  "darkColor": "#5B21B6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/service-management",
+              "features/frontend-components",
+              "features/data-model"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/docker",
+              "deployment/mongodb",
+              "deployment/environment"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/architecture",
+              "development/testing",
+              "development/seeding"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/services/get-all",
+              "api/services/get-by-id",
+              "api/services/create",
+              "api/services/update",
+              "api/services/delete",
+              "api/health"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Full CRUD REST API for streaming services",
+    "React frontend with dynamic service grid",
+    "MongoDB database with Mongoose ODM",
+    "Docker Compose orchestration",
+    "Discount and pricing management",
+    "Service card components with Tailwind CSS"
+  ],
+  "publicApiSurface": [
+    "GET /api/services",
+    "GET /api/services/:id",
+    "POST /api/services",
+    "PUT /api/services/:id",
+    "DELETE /api/services/:id",
+    "GET /api/health"
+  ]
+}
