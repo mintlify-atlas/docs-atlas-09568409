@@ -1,0 +1,387 @@
+---
+title: 'Frontend Components'
+description: 'React components for the service grid'
+---
+
+The Astro Services frontend is built with React and uses a component-based architecture to display streaming services. The application uses Tailwind CSS for styling and implements a responsive design.
+
+## Component Hierarchy
+
+```
+App
+├── Header (search & navigation)
+├── ServiceGrid (container)
+│   └── ServiceCard (individual cards)
+└── Footer
+```
+
+## Core Components
+
+### ServiceCard
+
+The `ServiceCard` component displays individual streaming service information with pricing, discounts, and imagery.
+
+**Location:** `src/components/ServiceCard.jsx`
+
+#### Props
+
+<ParamField path="service" type="object" required>
+  Service object containing all service data
+  
+  <ParamField path="service.imagen" type="string" required>
+    URL of the service image
+  </ParamField>
+  
+  <ParamField path="service.titulo" type="string" required>
+    Service title/name
+  </ParamField>
+  
+  <ParamField path="service.precio" type="number" required>
+    Original price in local currency
+  </ParamField>
+  
+  <ParamField path="service.descuento" type="number">
+    Discount percentage (0-100)
+  </ParamField>
+  
+  <ParamField path="service.descripcion" type="string" required>
+    Service description text
+  </ParamField>
+</ParamField>
+
+<ParamField path="priority" type="boolean" default="false">
+  Enables eager loading for above-the-fold images (first 3 cards)
+</ParamField>
+
+#### Implementation
+
+```jsx
+function ServiceCard({ service, priority = false }) {
+  const { imagen, titulo, precio, descuento, descripcion } = service;
+  const precioFinal = descuento > 0 
+    ? (precio * (1 - descuento / 100)).toFixed(2) 
+    : precio.toFixed(2);
+
+  return (
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-gray-900 shadow-lg transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-1">
+      {/* Imagen */}
+      <div className="relative h-48 overflow-hidden">
+        <img
+          src={imagen}
+          alt={titulo}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
+          decoding={priority ? 'sync' : 'async'}
+        />
+        {descuento > 0 && (
+          <span className="absolute top-3 right-3 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-md">
+            -{descuento}%
+          </span>
+        )}
+      </div>
+
+      {/* Contenido */}
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <h3 className="text-lg font-bold text-white">{titulo}</h3>
+        <p className="flex-1 text-sm leading-relaxed text-gray-400">
+          {descripcion}
+        </p>
+
+        {/* Precio */}
+        <div className="flex items-end gap-2 pt-2">
+          <span className="text-2xl font-extrabold text-indigo-400">
+            S/.{precioFinal}
+          </span>
+          {descuento > 0 && (
+            <span className="mb-0.5 text-sm text-gray-500 line-through">
+              S/.{precio.toFixed(2)}
+            </span>
+          )}
+          <span className="mb-0.5 text-xs text-gray-500">/mes</span>
+        </div>
+
+        {/* Botón */}
+        <a href="https://wa.me/51933863899" target="_blank" rel="noopener noreferrer">
+          <button className="mt-2 w-full cursor-pointer rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-indigo-500 active:bg-indigo-700">
+            Contratar
+          </button>
+        </a>
+      </div>
+    </div>
+  );
+}
+```
+
+#### Key Features
+
+- **Dynamic pricing calculation** - Automatically computes final price with discount
+- **Performance optimization** - Uses `priority` prop for lazy loading
+- **Hover effects** - Card elevation and image zoom on hover
+- **Discount badge** - Conditionally displayed when discount > 0
+- **WhatsApp integration** - Direct contact button
+
+---
+
+### ServiceGrid
+
+Container component that renders a responsive grid of service cards.
+
+**Location:** `src/components/ServiceGrid.jsx`
+
+#### Props
+
+<ParamField path="services" type="array" required>
+  Array of service objects to display
+</ParamField>
+
+#### Implementation
+
+```jsx
+function ServiceGrid({ services }) {
+  if (services.length === 0) {
+    return (
+      <p className="text-center text-gray-500">
+        Servicio no encontrado.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {services.map((service, index) => (
+        <ServiceCard 
+          key={service._id} 
+          service={service} 
+          priority={index < 3}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+#### Key Features
+
+- **Responsive grid** - 1 column (mobile), 2 columns (tablet), 3 columns (desktop)
+- **Empty state** - Displays message when no services match search
+- **Performance optimization** - First 3 cards load eagerly
+- **Unique keys** - Uses MongoDB `_id` for React keys
+
+---
+
+### Header
+
+Navigation header with search functionality and responsive menu.
+
+**Location:** `src/components/Header.jsx`
+
+#### Props
+
+<ParamField path="searchTerm" type="string" required>
+  Current search query value
+</ParamField>
+
+<ParamField path="onSearchChange" type="function" required>
+  Callback function when search input changes
+</ParamField>
+
+#### Implementation
+
+```jsx
+function Header({ searchTerm, onSearchChange }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <header className="border-b border-gray-800 bg-gray-950">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+        {/* Logo */}
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold tracking-tight text-white">
+            Astro <span className="text-indigo-400">Streaming</span>
+          </h1>
+        </div>
+
+        {/* Buscador (escritorio) */}
+        <div className="hidden flex-1 max-w-md md:block">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Buscar servicios..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 pr-10 text-sm text-white placeholder-gray-500 transition-colors focus:border-indigo-500 focus:outline-none"
+            />
+            <svg
+              className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Navigation and hamburger menu... */}
+      </div>
+    </header>
+  );
+}
+```
+
+#### Key Features
+
+- **Responsive search** - Desktop header search + mobile search bar
+- **Hamburger menu** - Animated mobile navigation
+- **External links** - WhatsApp contact with proper security attributes
+- **Search icon** - SVG icon with absolute positioning
+
+---
+
+### Footer
+
+Simple footer component with copyright information.
+
+**Location:** `src/components/Footer.jsx`
+
+#### Implementation
+
+```jsx
+function Footer() {
+  return (
+    <footer className="border-t border-gray-800 bg-gray-950 py-6 text-center text-sm text-gray-500">
+      <p>{new Date().getFullYear()} Desarrollado por Luis LLatas.</p>
+    </footer>
+  );
+}
+```
+
+## Custom Hooks
+
+### useServices
+
+Custom hook for fetching services with loading and error states.
+
+**Location:** `src/hooks/useServices.js`
+
+#### Return Values
+
+<ParamField path="services" type="array">
+  Array of service objects from the API
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  True while fetching data
+</ParamField>
+
+<ParamField path="error" type="string | null">
+  Error message if fetch fails, null otherwise
+</ParamField>
+
+#### Implementation
+
+```javascript
+import { useState, useEffect } from 'react';
+import { fetchServices } from '../services/api';
+
+const useServices = () => {
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchServices();
+        setServices(data);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
+
+  return { services, loading, error };
+};
+```
+
+#### Usage in App Component
+
+```jsx
+function App() {
+  const { services, loading, error } = useServices();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredServices = useMemo(() => {
+    if (!searchTerm.trim()) return services;
+    return services.filter((service) =>
+      service.titulo.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [services, searchTerm]);
+
+  return (
+    <div className="flex min-h-screen flex-col bg-gray-950 text-white">
+      <Header searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+      
+      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-12">
+        {loading && <div className="flex justify-center py-20">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+        </div>}
+
+        {error && <div className="rounded-xl border border-red-800 bg-red-950/50 p-6 text-center text-red-400">
+          <p className="font-semibold">Error al cargar los servicios</p>
+          <p className="mt-1 text-sm">{error}</p>
+        </div>}
+
+        {!loading && !error && <ServiceGrid services={filteredServices} />}
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+```
+
+## Tailwind CSS Styling Approach
+
+The application uses Tailwind CSS utility classes with a consistent design system:
+
+<CardGroup cols={2}>
+  <Card title="Color Palette" icon="palette">
+    - Background: `gray-950`, `gray-900`
+    - Primary: `indigo-400`, `indigo-500`, `indigo-600`
+    - Accent: `emerald-500` (discounts)
+    - Text: `white`, `gray-400`, `gray-500`
+  </Card>
+  
+  <Card title="Design Patterns" icon="wand-magic-sparkles">
+    - Responsive breakpoints: `sm:`, `md:`, `lg:`
+    - Hover transitions: `hover:scale-110`, `hover:-translate-y-1`
+    - Border radius: `rounded-lg`, `rounded-xl`, `rounded-2xl`
+    - Shadows: `shadow-lg`, `shadow-2xl`
+  </Card>
+</CardGroup>
+
+### Responsive Grid System
+
+```css
+grid-cols-1           /* Mobile: 1 column */
+sm:grid-cols-2        /* Tablet: 2 columns at 640px+ */
+lg:grid-cols-3        /* Desktop: 3 columns at 1024px+ */
+```
+
+### Animation Classes
+
+- **Spinner:** `animate-spin` - Loading indicator
+- **Card hover:** `duration-300`, `duration-500` - Smooth transitions
+- **Hamburger menu:** `translate-y-2 rotate-45` - Animated menu icon
+
+<Note>
+All components use the `group` utility for coordinated hover effects. When hovering over a card, both the card shadow and inner image scale simultaneously.
+</Note>

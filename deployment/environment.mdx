@@ -1,0 +1,641 @@
+---
+title: "Environment Variables"
+description: "Configure environment variables for Astro Services"
+---
+
+## Overview
+
+Astro Services uses environment variables to configure application behavior across different environments. This approach keeps sensitive information secure and allows easy configuration management without code changes.
+
+## Required Variables
+
+The backend application requires the following environment variables to function properly:
+
+<ParamField path="PORT" type="number" default="5000" required>
+  The port number on which the Express server listens for incoming HTTP requests.
+
+  **Example:**
+  ```bash
+  PORT=5000
+  ```
+
+  **Notes:**
+  - Must be an available port (not in use by another service)
+  - Standard port ranges: 3000-9000 for development
+  - Production deployments may use port 80 (HTTP) or 443 (HTTPS) behind a reverse proxy
+</ParamField>
+
+<ParamField path="MONGODB_URI" type="string" required>
+  The MongoDB connection string used to connect to the database. Supports both local and Atlas deployments.
+
+  **Format:**
+  ```bash
+  # Local Docker
+  MONGODB_URI=mongodb://mongo:27017/astro_services
+
+  # Local standalone
+  MONGODB_URI=mongodb://localhost:27017/astro_services
+
+  # MongoDB Atlas
+  MONGODB_URI=mongodb+srv://username:password@cluster.xxxxx.mongodb.net/astro_services?retryWrites=true&w=majority
+
+  # With authentication (local)
+  MONGODB_URI=mongodb://admin:password@mongo:27017/astro_services?authSource=admin
+  ```
+
+  **Components:**
+  - **Protocol**: `mongodb://` (local) or `mongodb+srv://` (Atlas)
+  - **Credentials**: `username:password@` (if authentication enabled)
+  - **Host**: `mongo` (Docker), `localhost` (local), or Atlas cluster URL
+  - **Port**: `27017` (default MongoDB port, not needed for Atlas)
+  - **Database**: `astro_services`
+  - **Query params**: Authentication source, retry settings, write concern
+
+  <Warning>
+    Never commit MongoDB connection strings with credentials to version control. Always use environment variables.
+  </Warning>
+</ParamField>
+
+## Configuration Methods
+
+### Docker Compose
+
+The recommended approach for local development is defining environment variables in `docker-compose.yml`:
+
+```yaml docker-compose.yml
+backend:
+  build: ./astro_backend
+  container_name: astro_backend
+  ports:
+    - '5000:5000'
+  environment:
+    - PORT=5000
+    - MONGODB_URI=mongodb://mongo:27017/astro_services
+  depends_on:
+    - mongo
+```
+
+**Advantages:**
+- Configuration is version controlled
+- Easy to share with team members
+- Automatically applied when starting containers
+- Good for development with non-sensitive values
+
+<Note>
+  For production deployments, use environment files or secret management systems instead of hardcoding values.
+</Note>
+
+### Environment Files (.env)
+
+Create a `.env` file in the `astro_backend` directory:
+
+```bash .env
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/astro_services
+```
+
+The application uses `dotenv` to automatically load variables from `.env`:
+
+```javascript astro_backend/src/server.js
+import 'dotenv/config';
+import connectDB from './config/db.js';
+import app from './app.js';
+
+const PORT = process.env.PORT || 5000;
+```
+
+**Usage with Docker Compose:**
+
+Update `docker-compose.yml` to use an env file:
+
+```yaml
+backend:
+  build: ./astro_backend
+  container_name: astro_backend
+  ports:
+    - '5000:5000'
+  env_file:
+    - ./astro_backend/.env
+  depends_on:
+    - mongo
+```
+
+<Warning>
+  Always add `.env` to your `.gitignore` file to prevent committing sensitive credentials:
+  
+  ```gitignore .gitignore
+  # Environment variables
+  .env
+  .env.local
+  .env.*.local
+  ```
+</Warning>
+
+### System Environment Variables
+
+Set variables directly in your shell:
+
+<CodeGroup>
+
+```bash Linux/macOS
+export PORT=5000
+export MONGODB_URI=mongodb://localhost:27017/astro_services
+```
+
+```powershell Windows PowerShell
+$env:PORT=5000
+$env:MONGODB_URI="mongodb://localhost:27017/astro_services"
+```
+
+```cmd Windows CMD
+set PORT=5000
+set MONGODB_URI=mongodb://localhost:27017/astro_services
+```
+
+</CodeGroup>
+
+**Permanent configuration:**
+
+<CodeGroup>
+
+```bash Linux/macOS (~/.bashrc or ~/.zshrc)
+# Add to shell configuration file
+export PORT=5000
+export MONGODB_URI=mongodb://localhost:27017/astro_services
+```
+
+```powershell Windows (PowerShell Profile)
+# Add to PowerShell profile
+$env:PORT=5000
+$env:MONGODB_URI="mongodb://localhost:27017/astro_services"
+```
+
+</CodeGroup>
+
+### Command Line
+
+Pass environment variables directly when starting the application:
+
+```bash
+PORT=5000 MONGODB_URI=mongodb://localhost:27017/astro_services npm start
+```
+
+Or with Docker:
+
+```bash
+docker run -e PORT=5000 -e MONGODB_URI=mongodb://mongo:27017/astro_services astro_backend
+```
+
+## Environment-Specific Configuration
+
+### Development
+
+Development environment typically uses local database with relaxed security:
+
+```bash .env.development
+PORT=5000
+MONGODB_URI=mongodb://mongo:27017/astro_services
+NODE_ENV=development
+```
+
+**Characteristics:**
+- Local MongoDB instance
+- No authentication required
+- Debug logging enabled
+- Hot reload enabled (`npm run dev`)
+
+### Production
+
+Production environment requires secure configuration:
+
+```bash .env.production
+PORT=5000
+MONGODB_URI=mongodb+srv://prod_user:strong_password@cluster0.xxxxx.mongodb.net/astro_services?retryWrites=true&w=majority
+NODE_ENV=production
+```
+
+**Characteristics:**
+- MongoDB Atlas with authentication
+- Restricted network access
+- Production-optimized logging
+- Minified frontend assets
+- Rate limiting enabled
+- CORS properly configured
+
+<Warning>
+  Production credentials must be stored securely using secret management services like:
+  - AWS Secrets Manager
+  - HashiCorp Vault
+  - Azure Key Vault
+  - Google Secret Manager
+  - Environment variables in hosting platforms (Heroku, Vercel, etc.)
+</Warning>
+
+### Testing
+
+Testing environment uses isolated database:
+
+```bash .env.test
+PORT=5001
+MONGODB_URI=mongodb://localhost:27017/astro_services_test
+NODE_ENV=test
+```
+
+**Best practices:**
+- Use separate test database
+- Reset database before each test suite
+- Use mock data
+- Avoid external API calls
+
+## Creating .env.example
+
+Provide a template `.env.example` file in your repository with placeholder values:
+
+```bash .env.example
+# Server Configuration
+PORT=5000
+
+# Database Configuration
+MONGODB_URI=mongodb://mongo:27017/astro_services
+
+# For production, use MongoDB Atlas:
+# MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/astro_services
+
+# Node Environment
+NODE_ENV=development
+```
+
+**Instructions for team members:**
+
+<Steps>
+  <Step title="Copy Template">
+    ```bash
+    cp .env.example .env
+    ```
+  </Step>
+
+  <Step title="Fill in Values">
+    Edit `.env` with your actual configuration:
+    ```bash
+    # Edit the file
+    nano .env
+    ```
+  </Step>
+
+  <Step title="Verify Configuration">
+    ```bash
+    npm run dev
+    ```
+  </Step>
+</Steps>
+
+## Variable Loading and Precedence
+
+The `dotenv` package loads environment variables when the application starts:
+
+```javascript
+import 'dotenv/config';
+```
+
+**Precedence order (highest to lowest):**
+
+1. System environment variables
+2. Variables defined in `.env` file
+3. Default values in code
+
+**Example:**
+
+```javascript astro_backend/src/server.js
+const PORT = process.env.PORT || 5000;
+```
+
+This will:
+1. Check if `PORT` exists in system environment
+2. Check if `PORT` exists in `.env` file
+3. Use default value `5000` if not found
+
+## Accessing Environment Variables
+
+### In Node.js Code
+
+Access environment variables through `process.env`:
+
+```javascript
+// Server configuration
+const port = process.env.PORT;
+const mongoUri = process.env.MONGODB_URI;
+const nodeEnv = process.env.NODE_ENV;
+
+// With defaults
+const port = process.env.PORT || 5000;
+const dbName = process.env.DB_NAME || 'astro_services';
+
+// Validation
+if (!process.env.MONGODB_URI) {
+  console.error('MONGODB_URI environment variable is required');
+  process.exit(1);
+}
+```
+
+### In Docker Containers
+
+Docker passes environment variables from `docker-compose.yml` to the container:
+
+```yaml
+backend:
+  environment:
+    - PORT=${PORT:-5000}
+    - MONGODB_URI=${MONGODB_URI}
+```
+
+The `${VAR:-default}` syntax uses the host's environment variable or falls back to a default.
+
+### Runtime Access
+
+Check current environment variables:
+
+```bash
+# Inside Docker container
+docker-compose exec backend env
+
+# On host system
+printenv | grep PORT
+printenv | grep MONGODB_URI
+```
+
+## Security Best Practices
+
+<Warning>
+  Following security best practices for environment variables is critical to protect your application and data.
+</Warning>
+
+### Do's
+
+✅ **Use `.env` files for local development**
+  ```bash
+  # .env
+  MONGODB_URI=mongodb://localhost:27017/astro_services
+  ```
+
+✅ **Add `.env` to `.gitignore`**
+  ```gitignore
+  .env
+  .env.local
+  .env.*.local
+  ```
+
+✅ **Provide `.env.example` with placeholders**
+  ```bash
+  # .env.example
+  MONGODB_URI=mongodb://localhost:27017/astro_services
+  ```
+
+✅ **Use secret management in production**
+  - AWS Secrets Manager
+  - HashiCorp Vault
+  - Platform-specific solutions (Heroku Config Vars, etc.)
+
+✅ **Validate required variables on startup**
+  ```javascript
+  const requiredEnvVars = ['PORT', 'MONGODB_URI'];
+  
+  for (const varName of requiredEnvVars) {
+    if (!process.env[varName]) {
+      throw new Error(`Missing required environment variable: ${varName}`);
+    }
+  }
+  ```
+
+✅ **Use different credentials per environment**
+  - Development: Less restrictive, local database
+  - Staging: Similar to production, separate resources
+  - Production: Maximum security, isolated from other environments
+
+✅ **Rotate credentials regularly**
+  - Change database passwords periodically
+  - Use temporary credentials when possible
+  - Revoke access for departing team members
+
+### Don'ts
+
+❌ **Never commit `.env` files to git**
+  ```bash
+  # Bad - exposes secrets
+  git add .env
+  git commit -m "Add configuration"
+  ```
+
+❌ **Never hardcode sensitive values**
+  ```javascript
+  // Bad - credentials in code
+  const mongoUri = 'mongodb+srv://admin:password123@cluster.mongodb.net/db';
+  
+  // Good - use environment variables
+  const mongoUri = process.env.MONGODB_URI;
+  ```
+
+❌ **Never log sensitive environment variables**
+  ```javascript
+  // Bad - logs credentials
+  console.log('MongoDB URI:', process.env.MONGODB_URI);
+  
+  // Good - log non-sensitive info only
+  console.log('Database connected successfully');
+  ```
+
+❌ **Never use production credentials in development**
+  - Keep production data isolated
+  - Use separate databases for each environment
+  - Avoid accidentally modifying production data
+
+❌ **Never share credentials via insecure channels**
+  - Don't send credentials via email, Slack, etc.
+  - Use secure secret sharing tools (1Password, LastPass, etc.)
+  - Better yet, have each developer create their own local credentials
+
+## Validation and Error Handling
+
+Implement validation to catch configuration errors early:
+
+```javascript astro_backend/src/config/validate.js
+export const validateEnvironment = () => {
+  const errors = [];
+
+  // Check required variables
+  if (!process.env.PORT) {
+    errors.push('PORT is required');
+  }
+
+  if (!process.env.MONGODB_URI) {
+    errors.push('MONGODB_URI is required');
+  }
+
+  // Validate formats
+  const port = parseInt(process.env.PORT);
+  if (isNaN(port) || port < 1 || port > 65535) {
+    errors.push('PORT must be a valid port number (1-65535)');
+  }
+
+  if (!process.env.MONGODB_URI.startsWith('mongodb://') && 
+      !process.env.MONGODB_URI.startsWith('mongodb+srv://')) {
+    errors.push('MONGODB_URI must start with mongodb:// or mongodb+srv://');
+  }
+
+  // Report errors
+  if (errors.length > 0) {
+    console.error('Environment validation failed:');
+    errors.forEach(error => console.error(`  - ${error}`));
+    process.exit(1);
+  }
+
+  console.log('Environment validation passed');
+};
+```
+
+Use in `server.js`:
+
+```javascript
+import { validateEnvironment } from './config/validate.js';
+
+validateEnvironment();
+// Continue with server startup...
+```
+
+## Common Configurations
+
+### Local Docker Development
+
+```yaml docker-compose.yml
+backend:
+  environment:
+    - PORT=5000
+    - MONGODB_URI=mongodb://mongo:27017/astro_services
+    - NODE_ENV=development
+```
+
+### MongoDB Atlas Production
+
+```bash .env.production
+PORT=5000
+MONGODB_URI=mongodb+srv://prod_user:strong_password@prod-cluster.xxxxx.mongodb.net/astro_services?retryWrites=true&w=majority&appName=AstroServices
+NODE_ENV=production
+```
+
+### Local Development (No Docker)
+
+```bash .env
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/astro_services
+NODE_ENV=development
+```
+
+### CI/CD Pipeline
+
+```yaml .github/workflows/deploy.yml
+env:
+  PORT: 5000
+  MONGODB_URI: ${{ secrets.MONGODB_URI }}
+  NODE_ENV: production
+```
+
+## Troubleshooting
+
+<Accordion title="Variables not loading">
+  **Check `.env` file location:**
+  - Must be in the same directory as `package.json`
+  - Named exactly `.env` (not `.env.txt`)
+
+  **Verify dotenv is imported:**
+  ```javascript
+  import 'dotenv/config';
+  ```
+
+  **Check for syntax errors:**
+  ```bash
+  # Correct
+  PORT=5000
+  MONGODB_URI=mongodb://localhost:27017/astro_services
+
+  # Incorrect (spaces around =)
+  PORT = 5000
+  ```
+
+  **Restart the application:**
+  Environment variables are loaded once at startup.
+</Accordion>
+
+<Accordion title="Docker container not using .env file">
+  **Ensure env_file is specified:**
+  ```yaml
+  backend:
+    env_file:
+      - ./astro_backend/.env
+  ```
+
+  **Or use environment key:**
+  ```yaml
+  backend:
+    environment:
+      - PORT=${PORT}
+      - MONGODB_URI=${MONGODB_URI}
+  ```
+
+  **Rebuild and restart:**
+  ```bash
+  docker-compose down
+  docker-compose up --build -d
+  ```
+</Accordion>
+
+<Accordion title="Connection string with special characters">
+  **URL encode special characters in passwords:**
+  ```javascript
+  # If password is: p@ssw0rd!
+  # Encode as: p%40ssw0rd%21
+  
+  MONGODB_URI=mongodb+srv://user:p%40ssw0rd%21@cluster.mongodb.net/astro_services
+  ```
+
+  **Common encodings:**
+  - `@` → `%40`
+  - `:` → `%3A`
+  - `/` → `%2F`
+  - `?` → `%3F`
+  - `#` → `%23`
+  - `&` → `%26`
+
+  **Or use environment variables in code:**
+  ```javascript
+  const username = process.env.MONGO_USERNAME;
+  const password = encodeURIComponent(process.env.MONGO_PASSWORD);
+  const uri = `mongodb+srv://${username}:${password}@cluster.mongodb.net/astro_services`;
+  ```
+</Accordion>
+
+<Accordion title="PORT already in use">
+  **Change the port number:**
+  ```bash
+  PORT=5001
+  ```
+
+  **Find and kill the process using the port:**
+  ```bash
+  # Linux/macOS
+  lsof -ti:5000 | xargs kill -9
+
+  # Windows
+  netstat -ano | findstr :5000
+  taskkill /PID <PID> /F
+  ```
+
+  **Use different port for development:**
+  ```bash
+  PORT=3000 npm run dev
+  ```
+</Accordion>
+
+## Next Steps
+
+- Review [Docker Deployment](/deployment/docker) configuration
+- Configure [MongoDB](/deployment/mongodb) connection strings
+- Explore [API Reference](/api/overview) for available endpoints

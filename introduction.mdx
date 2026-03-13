@@ -1,0 +1,115 @@
+---
+title: Introduction
+description: Full-stack platform for managing and selling streaming and IPTV services with dynamic pricing and discounts.
+---
+
+# Welcome to Astro Services
+
+Astro Services is a modern full-stack web application designed for showcasing and managing streaming and IPTV services. Built with cutting-edge technologies, it provides a complete solution for displaying services in a dynamic grid with real-time pricing, discount calculations, and comprehensive service management.
+
+## What is Astro Services?
+
+Astro Services combines a React-based frontend with an Express.js backend and MongoDB database to create a seamless platform for streaming service marketplaces. The application features:
+
+- **Dynamic Service Grid**: Display streaming services with images, pricing, and discount information
+- **Full CRUD API**: Complete REST API for managing services
+- **Real-time Updates**: Service data is synchronized across the frontend and backend
+- **Docker-Ready**: Containerized setup for easy deployment
+- **Modern Stack**: React 19, Vite 7, Tailwind CSS 4, Express 4, MongoDB
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Service Management" icon="list" href="/features/service-management">
+    Comprehensive CRUD operations for managing streaming services with validation and error handling
+  </Card>
+  <Card title="React Components" icon="browser" href="/features/frontend-components">
+    Modern, responsive UI components built with React 19 and Tailwind CSS 4
+  </Card>
+  <Card title="REST API" icon="code" href="/api/overview">
+    Well-structured REST API with Express.js and MongoDB integration
+  </Card>
+  <Card title="Docker Deployment" icon="docker" href="/deployment/docker">
+    Complete Docker Compose orchestration for frontend, backend, and database
+  </Card>
+</CardGroup>
+
+## Technology Stack
+
+<CardGroup cols={3}>
+  <Card title="Frontend" icon="react">
+    - React 19
+    - Vite 7
+    - Tailwind CSS 4
+  </Card>
+  <Card title="Backend" icon="server">
+    - Node.js
+    - Express 4
+    - Mongoose 8
+  </Card>
+  <Card title="Database" icon="database">
+    - MongoDB
+    - MongoDB Atlas
+  </Card>
+</CardGroup>
+
+## Who is this for?
+
+Astro Services is ideal for:
+
+- **Developers** building streaming service marketplaces
+- **Businesses** selling IPTV or streaming subscriptions
+- **Students** learning full-stack web development
+- **Entrepreneurs** launching streaming service platforms
+
+## Quick Start
+
+Get up and running in minutes:
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Set up your first service in under 5 minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Complete installation instructions for all environments
+  </Card>
+</CardGroup>
+
+## Service Data Model
+
+Each service in Astro Services includes:
+
+- **Image**: URL to service logo or promotional image
+- **Title**: Service name (max 120 characters)
+- **Price**: Base price in your preferred currency
+- **Discount**: Percentage discount (0-100%)
+- **Description**: Service benefits and features (max 500 characters)
+
+<Note>
+All service data is stored in MongoDB with automatic timestamp tracking and validation.
+</Note>
+
+## Next Steps
+
+<Steps>
+  <Step title="Read the Quickstart">
+    Get your development environment set up in [5 minutes](/quickstart)
+  </Step>
+  <Step title="Explore the Architecture">
+    Understand how the [application is structured](/development/architecture)
+  </Step>
+  <Step title="Review the API">
+    Check out the [API Reference](/api/overview) for endpoint documentation
+  </Step>
+  <Step title="Deploy with Docker">
+    Learn how to [deploy with Docker Compose](/deployment/docker)
+  </Step>
+</Steps>
+
+## Community & Support
+
+This project is open source and developed by Luis Llatas, a student of Information Systems Management. Contributions and feedback are welcome!
+
+<Card title="View on GitHub" icon="github" href="https://github.com/luisllatas-dev/proyecto_streaming">
+  Star the repository and contribute to the project
+</Card>

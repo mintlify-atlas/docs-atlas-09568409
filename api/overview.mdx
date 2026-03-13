@@ -1,0 +1,96 @@
+---
+title: API Overview
+description: REST API reference for Astro Services
+---
+
+The Astro Services API provides endpoints to manage streaming and IPTV services. All endpoints return JSON responses and follow RESTful conventions.
+
+## Base URL
+
+```
+http://localhost:5000/api
+```
+
+## Authentication
+
+Currently, the API does not require authentication. All endpoints are publicly accessible.
+
+## Content Type
+
+All POST and PUT requests must include the following header:
+
+```
+Content-Type: application/json
+```
+
+## Response Format
+
+All responses are returned in JSON format. Successful responses include the requested data, while error responses include a `message` field describing the error and an `error` field with additional details.
+
+### Success Response Example
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://ejemplo.com/imagen.jpg",
+  "titulo": "Plan Premium",
+  "precio": 9.99,
+  "descuento": 15,
+  "descripcion": "Acceso completo a todos los canales HD",
+  "createdAt": "2026-03-13T10:30:00.000Z",
+  "updatedAt": "2026-03-13T10:30:00.000Z"
+}
+```
+
+### Error Response Example
+
+```json
+{
+  "message": "Error al crear el servicio",
+  "error": "Service validation failed: titulo: El título del servicio es obligatorio"
+}
+```
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Check API health status |
+| `GET` | `/services` | Get all services |
+| `GET` | `/services/:id` | Get a specific service by ID |
+| `POST` | `/services` | Create a new service |
+| `PUT` | `/services/:id` | Update an existing service |
+| `DELETE` | `/services/:id` | Delete a service |
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes:
+
+| Status Code | Description |
+|-------------|-------------|
+| `200` | OK - Request successful |
+| `201` | Created - Resource successfully created |
+| `400` | Bad Request - Invalid input or validation error |
+| `404` | Not Found - Resource not found |
+| `500` | Internal Server Error - Server-side error |
+
+## Error Handling
+
+All endpoints implement try-catch error handling. Errors are returned with appropriate HTTP status codes and include:
+
+- **message**: A human-readable description of the error
+- **error**: Technical error details (typically from MongoDB or validation)
+
+Common error scenarios:
+
+- **Validation errors** (400): Occur when required fields are missing or data doesn't meet schema constraints
+- **Not found errors** (404): Occur when attempting to access, update, or delete a non-existent service
+- **Server errors** (500): Occur due to database connection issues or unexpected server problems
+
+## Rate Limiting
+
+Currently, no rate limiting is implemented.
+
+## CORS
+
+CORS is enabled for all origins by default. In production, this is restricted to the frontend URL specified in the `FRONTEND_URL` environment variable.

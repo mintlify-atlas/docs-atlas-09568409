@@ -1,0 +1,140 @@
+---
+title: Delete Service
+description: Delete a service from the database
+---
+
+Permanently deletes a service from the database by its ID.
+
+## Endpoint
+
+```
+DELETE /api/services/:id
+```
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The MongoDB ObjectId of the service to delete. Must be a valid 24-character hexadecimal string.
+</ParamField>
+
+### cURL Example
+
+```bash
+curl -X DELETE http://localhost:5000/api/services/507f1f77bcf86cd799439011
+```
+
+### JavaScript Example
+
+```javascript
+const serviceId = '507f1f77bcf86cd799439011';
+const response = await fetch(`http://localhost:5000/api/services/${serviceId}`, {
+  method: 'DELETE'
+});
+
+const result = await response.json();
+```
+
+## Response
+
+Returns a success message confirming the deletion.
+
+### Response Fields
+
+<ResponseField name="message" type="string" required>
+  Confirmation message indicating the service was successfully deleted.
+</ResponseField>
+
+### Success Response (200 OK)
+
+```json
+{
+  "message": "Servicio eliminado correctamente"
+}
+```
+
+### Error Response (404 Not Found)
+
+Returned when no service exists with the specified ID:
+
+```json
+{
+  "message": "Servicio no encontrado"
+}
+```
+
+### Error Response (500 Internal Server Error)
+
+Returned for invalid ObjectId format or database errors:
+
+```json
+{
+  "message": "Error al eliminar el servicio",
+  "error": "Cast to ObjectId failed for value \"invalid-id\" at path \"_id\""
+}
+```
+
+## Implementation
+
+Controller function at `/home/daytona/workspace/source/astro_backend/src/controllers/serviceController.js:58-68`:
+
+```javascript
+export const deleteService = async (req, res) => {
+  try {
+    const service = await Service.findByIdAndDelete(req.params.id);
+    if (!service) {
+      return res.status(404).json({ message: 'Servicio no encontrado' });
+    }
+    res.json({ message: 'Servicio eliminado correctamente' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar el servicio', error: error.message });
+  }
+};
+```
+
+## Error Cases
+
+| Scenario | Status Code | Response |
+|----------|-------------|----------|
+| Invalid ObjectId format | 500 | Error message with cast failure details |
+| Service not found | 404 | `{ "message": "Servicio no encontrado" }` |
+| Database connection error | 500 | Error message with connection details |
+
+## Important Notes
+
+- **This operation is permanent** - Deleted services cannot be recovered
+- The `id` parameter must be a valid MongoDB ObjectId (24-character hexadecimal string)
+- Invalid ID formats will result in a 500 error with a cast failure message
+- Returns 404 if the ID format is valid but no matching service exists
+- No request body is required or accepted
+- The deleted service data is not returned in the response
+
+## Best Practices
+
+- Always verify the service ID before deletion
+- Consider implementing a "soft delete" pattern for production applications where records are marked as deleted rather than permanently removed
+- Implement proper authorization checks before allowing deletion in production
+- Log deletion operations for audit trails
+
+## Example Workflow
+
+```javascript
+// 1. Verify the service exists before deleting
+const checkResponse = await fetch(`http://localhost:5000/api/services/${serviceId}`);
+if (!checkResponse.ok) {
+  console.error('Service not found');
+  return;
+}
+
+// 2. Delete the service
+const deleteResponse = await fetch(`http://localhost:5000/api/services/${serviceId}`, {
+  method: 'DELETE'
+});
+
+// 3. Confirm deletion
+if (deleteResponse.ok) {
+  const result = await deleteResponse.json();
+  console.log(result.message); // "Servicio eliminado correctamente"
+}
+```

@@ -1,0 +1,547 @@
+---
+title: "Testing"
+description: "Testing strategy and running tests"
+---
+
+Astro Services uses **Vitest** as the primary testing framework for both backend and frontend applications. The testing suite includes unit tests, integration tests, and comprehensive coverage reporting.
+
+## Testing Stack
+
+<CardGroup cols={3}>
+  <Card title="Vitest" icon="vial">
+    Fast unit testing framework compatible with Vite
+  </Card>
+  <Card title="Supertest" icon="server">
+    HTTP assertion library for API testing
+  </Card>
+  <Card title="React Testing Library" icon="react">
+    Component testing utilities for React
+  </Card>
+</CardGroup>
+
+## Test Scripts
+
+Both applications share similar test commands:
+
+### Backend Tests
+
+```bash
+# Run tests in watch mode
+npm run test
+
+# Run tests once and exit
+npm run test:run
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Frontend Tests
+
+```bash
+# Run tests in watch mode
+npm run test
+
+# Run tests once and exit
+npm run test:run
+
+# Generate coverage report
+npm run test:coverage
+```
+
+## Backend Testing
+
+The backend includes comprehensive tests for models and API routes.
+
+### Model Tests (Service.test.js)
+
+The Service model tests validate schema validation rules and data integrity:
+
+```javascript
+import { describe, it, expect } from 'vitest';
+import Service from './Service.js';
+
+describe('Service Model - Schema Validation', () => {
+  it('should fail validation without required fields', async () => {
+    const service = new Service({});
+
+    let error;
+    try {
+      await service.validate();
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeDefined();
+    expect(error.errors.imagen).toBeDefined();
+    expect(error.errors.titulo).toBeDefined();
+    expect(error.errors.precio).toBeDefined();
+    expect(error.errors.descripcion).toBeDefined();
+  });
+
+  it('should pass validation with all required fields', async () => {
+    const service = new Service({
+      imagen: 'https://example.com/image.jpg',
+      titulo: 'Netflix Premium',
+      precio: 5.99,
+      descripcion: 'Servicio de streaming en 4K.',
+    });
+
+    let error;
+    try {
+      await service.validate();
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeUndefined();
+  });
+
+  it('should default descuento to 0', () => {
+    const service = new Service({
+      imagen: 'https://example.com/image.jpg',
+      titulo: 'Spotify',
+      precio: 3.49,
+      descripcion: 'Música sin anuncios.',
+    });
+
+    expect(service.descuento).toBe(0);
+  });
+
+  it('should reject negative precio', async () => {
+    const service = new Service({
+      imagen: 'https://example.com/image.jpg',
+      titulo: 'Test',
+      precio: -5,
+      descripcion: 'Test description',
+    });
+
+    let error;
+    try {
+      await service.validate();
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeDefined();
+    expect(error.errors.precio).toBeDefined();
+  });
+
+  it('should reject descuento > 100', async () => {
+    const service = new Service({
+      imagen: 'https://example.com/image.jpg',
+      titulo: 'Test',
+      precio: 5,
+      descuento: 150,
+      descripcion: 'Test description',
+    });
+
+    let error;
+    try {
+      await service.validate();
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeDefined();
+    expect(error.errors.descuento).toBeDefined();
+  });
+
+  it('should trim whitespace from string fields', () => {
+    const service = new Service({
+      imagen: '  https://example.com/image.jpg  ',
+      titulo: '  Netflix Premium  ',
+      precio: 5.99,
+      descripcion: '  Servicio de streaming.  ',
+    });
+
+    expect(service.imagen).toBe('https://example.com/image.jpg');
+    expect(service.titulo).toBe('Netflix Premium');
+    expect(service.descripcion).toBe('Servicio de streaming.');
+  });
+});
+```
+
+#### Test Coverage
+
+The model tests verify:
+
+<Accordion title="Required Field Validation">
+  - All required fields (`imagen`, `titulo`, `precio`, `descripcion`) must be present
+  - Validation fails if any required field is missing
+</Accordion>
+
+<Accordion title="Numeric Constraints">
+  - `precio` must be non-negative (minimum 0)
+  - `descuento` must be between 0 and 100
+  - Negative values are rejected
+</Accordion>
+
+<Accordion title="String Constraints">
+  - `titulo` cannot exceed 120 characters
+  - `descripcion` cannot exceed 500 characters
+  - Whitespace is automatically trimmed
+</Accordion>
+
+<Accordion title="Default Values">
+  - `descuento` defaults to 0 when not provided
+  - Timestamps are automatically added
+</Accordion>
+
+### API Route Tests (serviceRoutes.test.js)
+
+Integration tests for API endpoints using Supertest:
+
+```javascript
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import app from '../app.js';
+
+describe('API Routes - Health Check', () => {
+  describe('GET /api/health', () => {
+    it('should return health status', async () => {
+      const res = await request(app).get('/api/health');
+      
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('ok');
+      expect(res.body.timestamp).toBeDefined();
+    });
+
+    it('should return valid ISO timestamp', async () => {
+      const res = await request(app).get('/api/health');
+      
+      const timestamp = new Date(res.body.timestamp);
+      expect(timestamp).toBeInstanceOf(Date);
+      expect(isNaN(timestamp.getTime())).toBe(false);
+    });
+  });
+
+  describe('API Structure', () => {
+    it('should have CORS headers enabled', async () => {
+      const res = await request(app).get('/api/health');
+      
+      expect(res.headers['access-control-allow-origin']).toBeDefined();
+    });
+
+    it('should return JSON content type', async () => {
+      const res = await request(app).get('/api/health');
+      
+      expect(res.headers['content-type']).toMatch(/application\/json/);
+    });
+  });
+});
+```
+
+These tests verify:
+- Health check endpoint functionality
+- Proper HTTP status codes
+- CORS configuration
+- JSON response format
+- Timestamp generation
+
+## Frontend Testing
+
+Frontend tests cover API service functions and React components.
+
+### API Service Tests (api.test.js)
+
+```javascript
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fetchServices, fetchServiceById } from './api';
+
+// Mock global fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+const mockServices = [
+  { _id: '1', titulo: 'Netflix', precio: 5.99 },
+  { _id: '2', titulo: 'Disney+', precio: 4.99 },
+];
+
+describe('API Service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  describe('fetchServices', () => {
+    it('should fetch all services successfully', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockServices),
+      });
+
+      const result = await fetchServices();
+
+      expect(result).toEqual(mockServices);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/services'));
+    });
+
+    it('should throw error when response is not ok', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+      });
+
+      await expect(fetchServices()).rejects.toThrow('Error 500');
+    });
+  });
+
+  describe('fetchServiceById', () => {
+    it('should fetch a single service by ID', async () => {
+      const mockService = mockServices[0];
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockService),
+      });
+
+      const result = await fetchServiceById('1');
+
+      expect(result).toEqual(mockService);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/services/1'));
+    });
+
+    it('should throw error when service not found', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+      });
+
+      await expect(fetchServiceById('999')).rejects.toThrow('Error 404');
+    });
+  });
+});
+```
+
+These tests use Vitest's mocking capabilities to:
+- Mock the global `fetch` function
+- Test successful data fetching
+- Test error handling for failed requests
+- Verify correct API endpoints are called
+
+## Testing Configuration
+
+### Backend Package Configuration
+
+From `astro_backend/package.json`:
+
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "supertest": "^7.2.2",
+    "vitest": "^4.0.18"
+  }
+}
+```
+
+### Frontend Package Configuration
+
+From `astro_services/package.json`:
+
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "jsdom": "^28.1.0",
+    "vitest": "^4.0.18"
+  }
+}
+```
+
+## Running Tests
+
+<Steps>
+  <Step title="Navigate to Project Directory">
+    Choose which application to test:
+    
+    ```bash
+    # Backend tests
+    cd astro_backend
+
+    # OR Frontend tests
+    cd astro_services
+    ```
+  </Step>
+
+  <Step title="Run Tests in Watch Mode">
+    During development, use watch mode for automatic re-runs:
+    
+    ```bash
+    npm run test
+    ```
+    
+    This will:
+    - Watch for file changes
+    - Re-run affected tests automatically
+    - Display results in the terminal
+  </Step>
+
+  <Step title="Run Tests Once">
+    For CI/CD or one-time verification:
+    
+    ```bash
+    npm run test:run
+    ```
+    
+    This runs all tests once and exits with appropriate status code.
+  </Step>
+
+  <Step title="Generate Coverage Report">
+    To see how much code is tested:
+    
+    ```bash
+    npm run test:coverage
+    ```
+    
+    Coverage reports show:
+    - Lines covered
+    - Branches covered
+    - Functions covered
+    - Statements covered
+  </Step>
+</Steps>
+
+## Test Organization
+
+Tests are co-located with source files:
+
+```
+astro_backend/src/
+├── models/
+│   ├── Service.js
+│   └── Service.test.js          # Model unit tests
+├── routes/
+│   ├── serviceRoutes.js
+│   └── serviceRoutes.test.js    # Route integration tests
+└── controllers/
+    └── serviceController.js
+
+astro_services/src/
+├── services/
+│   ├── api.js
+│   └── api.test.js              # API service tests
+└── components/
+    ├── ServiceCard.jsx
+    └── ServiceCard.test.jsx     # Component tests (if exists)
+```
+
+## Writing New Tests
+
+### Testing a New Model
+
+```javascript
+import { describe, it, expect } from 'vitest';
+import YourModel from './YourModel.js';
+
+describe('YourModel - Schema Validation', () => {
+  it('should validate required fields', async () => {
+    const instance = new YourModel({ /* test data */ });
+    await expect(instance.validate()).resolves.toBeUndefined();
+  });
+});
+```
+
+### Testing an API Endpoint
+
+```javascript
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import app from '../app.js';
+
+describe('GET /api/your-endpoint', () => {
+  it('should return data', async () => {
+    const res = await request(app).get('/api/your-endpoint');
+    expect(res.status).toBe(200);
+    expect(res.body).toBeDefined();
+  });
+});
+```
+
+### Testing a React Component
+
+```javascript
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import YourComponent from './YourComponent';
+
+describe('YourComponent', () => {
+  it('should render correctly', () => {
+    render(<YourComponent />);
+    expect(screen.getByText(/expected text/i)).toBeDefined();
+  });
+});
+```
+
+## Testing Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Isolated Tests" icon="flask">
+    Each test should be independent and not rely on other tests
+  </Card>
+  <Card title="Clear Descriptions" icon="message">
+    Use descriptive test names that explain what is being tested
+  </Card>
+  <Card title="Arrange-Act-Assert" icon="list-check">
+    Structure tests with setup, execution, and verification phases
+  </Card>
+  <Card title="Mock External Dependencies" icon="plug">
+    Mock database calls, API requests, and other external services
+  </Card>
+</CardGroup>
+
+## Continuous Integration
+
+Tests should be run automatically in CI/CD pipelines:
+
+```yaml
+# Example GitHub Actions workflow
+- name: Run Backend Tests
+  run: |
+    cd astro_backend
+    npm install
+    npm run test:run
+
+- name: Run Frontend Tests
+  run: |
+    cd astro_services
+    npm install
+    npm run test:run
+```
+
+## Coverage Goals
+
+Aim for the following coverage targets:
+
+| Category | Target | Current |
+|----------|--------|---------|
+| Models | 100% | High |
+| Controllers | 80%+ | Medium |
+| Routes | 90%+ | High |
+| Services | 100% | High |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Understand the application structure and design patterns
+  </Card>
+  <Card title="Database Seeding" icon="seedling" href="/development/seeding">
+    Learn how to populate the database with sample data
+  </Card>
+</CardGroup>

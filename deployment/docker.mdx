@@ -1,0 +1,418 @@
+---
+title: "Docker Deployment"
+description: "Deploy Astro Services with Docker Compose"
+---
+
+## Overview
+
+Astro Services uses Docker Compose to orchestrate three containerized services: MongoDB database, Node.js backend API, and Nginx-served frontend application. This setup ensures consistent deployment across development and production environments.
+
+## Architecture
+
+The application consists of three interconnected services:
+
+- **mongo**: MongoDB 7 database server
+- **backend**: Node.js/Express API (Port 5000)
+- **frontend**: React application served via Nginx (Port 80)
+
+## Prerequisites
+
+Before deploying with Docker, ensure you have:
+
+- Docker Engine 20.10 or higher
+- Docker Compose 3.8 or higher
+- At least 2GB of available RAM
+- Ports 27017, 5000, and 80 available
+
+<Note>
+  The frontend service depends on the backend, which in turn depends on MongoDB. Docker Compose will start them in the correct order automatically.
+</Note>
+
+## Docker Compose Configuration
+
+The `docker-compose.yml` file defines the complete application stack:
+
+```yaml docker-compose.yml
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: astro_mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: ./astro_backend
+    container_name: astro_backend
+    ports:
+      - '5000:5000'
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/astro_services
+    depends_on:
+      - mongo
+
+  frontend:
+    build: ./astro_services
+    container_name: astro_frontend
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+```
+
+## Service Details
+
+### MongoDB Service
+
+The MongoDB service uses the official Mongo 7 image with persistent storage:
+
+- **Image**: `mongo:7`
+- **Container Name**: `astro_mongo`
+- **Port Mapping**: `27017:27017` (host:container)
+- **Volume**: `mongo_data` mounted to `/data/db` for data persistence
+
+<Warning>
+  The MongoDB instance has no authentication configured by default. For production deployments, add authentication using `MONGO_INITDB_ROOT_USERNAME` and `MONGO_INITDB_ROOT_PASSWORD` environment variables.
+</Warning>
+
+### Backend Service
+
+The backend service is built from the `astro_backend` directory using a multi-stage Node.js Dockerfile:
+
+<CodeGroup>
+
+```dockerfile astro_backend/Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["node", "src/server.js"]
+```
+
+</CodeGroup>
+
+- **Build Context**: `./astro_backend`
+- **Container Name**: `astro_backend`
+- **Port Mapping**: `5000:5000`
+- **Base Image**: Node.js 20 Alpine (lightweight)
+- **Dependencies**: Installed via `npm ci` for reproducible builds
+
+### Frontend Service
+
+The frontend service uses a two-stage build process to create an optimized production bundle:
+
+<CodeGroup>
+
+```dockerfile astro_services/Dockerfile
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+</CodeGroup>
+
+- **Build Context**: `./astro_services`
+- **Container Name**: `astro_frontend`
+- **Port Mapping**: `80:80`
+- **Build Stage**: Compiles React application
+- **Runtime Stage**: Serves static files via Nginx Alpine
+
+## Deployment Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    First, clone the Astro Services repository to your local machine:
+
+    ```bash
+    git clone <repository-url>
+    cd astro-services
+    ```
+  </Step>
+
+  <Step title="Review Environment Variables">
+    The backend service requires two environment variables, which are defined in `docker-compose.yml`:
+
+    - `PORT=5000` - The port on which the backend server listens
+    - `MONGODB_URI=mongodb://mongo:27017/astro_services` - MongoDB connection string
+
+    For custom configuration, see the [Environment Variables](/deployment/environment) guide.
+  </Step>
+
+  <Step title="Build the Services">
+    Build all Docker images defined in the compose file:
+
+    ```bash
+    docker-compose build
+    ```
+
+    This will:
+    - Pull the MongoDB 7 image
+    - Build the backend Node.js application
+    - Build the frontend React application with Nginx
+
+    <Note>
+      The initial build may take several minutes as it downloads base images and installs dependencies.
+    </Note>
+  </Step>
+
+  <Step title="Start the Application">
+    Launch all services in detached mode:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+    Docker Compose will start services in dependency order:
+    1. MongoDB container starts first
+    2. Backend waits for MongoDB, then starts
+    3. Frontend waits for backend, then starts
+  </Step>
+
+  <Step title="Verify Deployment">
+    Check that all containers are running:
+
+    ```bash
+    docker-compose ps
+    ```
+
+    You should see all three services in the "Up" state:
+    ```
+    NAME              STATUS    PORTS
+    astro_mongo       Up        0.0.0.0:27017->27017/tcp
+    astro_backend     Up        0.0.0.0:5000->5000/tcp
+    astro_frontend    Up        0.0.0.0:80->80/tcp
+    ```
+  </Step>
+
+  <Step title="Test the Application">
+    Access the application:
+    - **Frontend**: http://localhost
+    - **Backend API**: http://localhost:5000
+    - **MongoDB**: localhost:27017
+
+    Test the API health:
+    ```bash
+    curl http://localhost:5000/api/services
+    ```
+  </Step>
+</Steps>
+
+## Volume Management
+
+The `mongo_data` volume persists database information across container restarts:
+
+```bash
+# List volumes
+docker volume ls
+
+# Inspect the MongoDB volume
+docker volume inspect astro-services_mongo_data
+
+# Backup the database
+docker-compose exec mongo mongodump --out /data/db/backup
+
+# Remove volume (WARNING: deletes all data)
+docker-compose down -v
+```
+
+<Warning>
+  Running `docker-compose down -v` will delete the MongoDB volume and all stored data. Use this flag only when you want to completely reset the database.
+</Warning>
+
+## Useful Commands
+
+### View Logs
+
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f backend
+
+# Last 100 lines
+docker-compose logs --tail=100 backend
+```
+
+### Restart Services
+
+```bash
+# Restart all services
+docker-compose restart
+
+# Restart specific service
+docker-compose restart backend
+```
+
+### Stop and Remove
+
+```bash
+# Stop services (keeps containers)
+docker-compose stop
+
+# Stop and remove containers
+docker-compose down
+
+# Stop, remove containers and volumes
+docker-compose down -v
+```
+
+### Execute Commands in Containers
+
+```bash
+# Open MongoDB shell
+docker-compose exec mongo mongosh
+
+# Access backend container shell
+docker-compose exec backend sh
+
+# Run backend seed script
+docker-compose exec backend npm run seed
+```
+
+## Updating the Application
+
+<Steps>
+  <Step title="Pull Latest Changes">
+    ```bash
+    git pull origin main
+    ```
+  </Step>
+
+  <Step title="Rebuild Images">
+    ```bash
+    docker-compose build
+    ```
+  </Step>
+
+  <Step title="Restart Services">
+    ```bash
+    docker-compose up -d
+    ```
+
+    Docker Compose will recreate only the containers with updated images.
+  </Step>
+</Steps>
+
+## Port Configuration
+
+| Service  | Container Port | Host Port | Purpose                    |
+|----------|---------------|-----------|----------------------------|
+| mongo    | 27017         | 27017     | MongoDB database access    |
+| backend  | 5000          | 5000      | REST API endpoints         |
+| frontend | 80            | 80        | Web application interface  |
+
+To change port mappings, edit the `ports` section in `docker-compose.yml`:
+
+```yaml
+ports:
+  - '<host-port>:<container-port>'
+```
+
+## Troubleshooting
+
+<Accordion title="Container fails to start">
+  Check container logs for specific errors:
+  ```bash
+  docker-compose logs backend
+  ```
+
+  Common issues:
+  - Port already in use: Change the host port mapping
+  - Build failures: Ensure all dependencies are correctly specified
+  - Permission issues: Run with appropriate user permissions
+</Accordion>
+
+<Accordion title="Cannot connect to MongoDB">
+  Verify the MongoDB container is running:
+  ```bash
+  docker-compose ps mongo
+  ```
+
+  Test MongoDB connectivity from the backend container:
+  ```bash
+  docker-compose exec backend ping mongo
+  ```
+
+  The backend uses the service name `mongo` as the hostname, which Docker's internal DNS resolves.
+</Accordion>
+
+<Accordion title="Frontend cannot reach backend API">
+  Ensure the backend service is healthy:
+  ```bash
+  curl http://localhost:5000/api/services
+  ```
+
+  Check if the frontend is configured with the correct API URL. The React application should make requests to the appropriate backend endpoint.
+</Accordion>
+
+<Accordion title="Persistent data is lost">
+  Verify the volume is properly mounted:
+  ```bash
+  docker volume inspect astro-services_mongo_data
+  ```
+
+  Avoid using the `-v` flag with `docker-compose down` unless you intend to delete data.
+</Accordion>
+
+## Production Considerations
+
+When deploying to production, consider these enhancements:
+
+<Warning>
+  The default configuration is suitable for development but requires hardening for production use.
+</Warning>
+
+1. **MongoDB Authentication**: Enable authentication and use strong credentials
+2. **Environment Variables**: Store secrets in a secure secret management system
+3. **Reverse Proxy**: Use a reverse proxy (Nginx, Traefik) for SSL/TLS termination
+4. **Health Checks**: Add Docker health checks to each service
+5. **Resource Limits**: Configure CPU and memory limits for each container
+6. **Logging**: Implement centralized logging (ELK stack, CloudWatch, etc.)
+7. **Monitoring**: Add monitoring with Prometheus, Grafana, or similar tools
+8. **Backups**: Automate regular MongoDB backups
+
+Example health check configuration:
+
+```yaml
+backend:
+  # ... other config
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:5000/api/services"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 40s
+```
+
+## Next Steps
+
+- Configure [Environment Variables](/deployment/environment) for your deployment
+- Set up [MongoDB](/deployment/mongodb) with authentication and backups
+- Review the [API Reference](/api/overview) for available endpoints

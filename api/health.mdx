@@ -1,0 +1,68 @@
+---
+title: Health Check
+description: Check the API health status
+---
+
+The health check endpoint provides a simple way to verify that the API is running and responsive. This endpoint is useful for monitoring, load balancers, and container orchestration systems.
+
+## Endpoint
+
+```
+GET /api/health
+```
+
+## Request
+
+No parameters or request body required.
+
+### cURL Example
+
+```bash
+curl http://localhost:5000/api/health
+```
+
+## Response
+
+Returns a JSON object with the server status and current timestamp.
+
+### Response Fields
+
+<ResponseField name="status" type="string" required>
+  Server status indicator. Always returns `"ok"` when the API is running.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  Current server time in ISO 8601 format.
+</ResponseField>
+
+### Success Response (200 OK)
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-03-13T10:30:45.123Z"
+}
+```
+
+## Implementation
+
+The health check endpoint is implemented in `/home/daytona/workspace/source/astro_backend/src/app.js:18-20`:
+
+```javascript
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+```
+
+## Use Cases
+
+- **Monitoring**: Set up automated health checks to monitor API availability
+- **Load Balancers**: Configure health check probes for load balancing
+- **Docker/Kubernetes**: Use as a liveness/readiness probe
+- **CI/CD Pipelines**: Verify deployment success
+
+## Notes
+
+- This endpoint does not verify database connectivity
+- Always returns 200 status code when the server is running
+- No authentication required

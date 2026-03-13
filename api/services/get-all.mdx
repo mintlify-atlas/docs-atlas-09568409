@@ -1,0 +1,136 @@
+---
+title: Get All Services
+description: Retrieve all services from the database
+---
+
+Retrieves all services stored in the database, sorted by creation date in descending order (newest first).
+
+## Endpoint
+
+```
+GET /api/services
+```
+
+## Request
+
+No parameters or request body required.
+
+### cURL Example
+
+```bash
+curl http://localhost:5000/api/services
+```
+
+### JavaScript Example
+
+```javascript
+const response = await fetch('http://localhost:5000/api/services');
+const services = await response.json();
+```
+
+## Response
+
+Returns an array of service objects.
+
+### Response Fields
+
+Each service object in the array contains:
+
+<ResponseField name="_id" type="string" required>
+  Unique MongoDB ObjectId for the service.
+</ResponseField>
+
+<ResponseField name="imagen" type="string" required>
+  URL of the service image.
+</ResponseField>
+
+<ResponseField name="titulo" type="string" required>
+  Service title or plan name. Maximum 120 characters.
+</ResponseField>
+
+<ResponseField name="precio" type="number" required>
+  Service price. Must be greater than or equal to 0.
+</ResponseField>
+
+<ResponseField name="descuento" type="number" required>
+  Discount percentage. Ranges from 0 to 100. Default is 0.
+</ResponseField>
+
+<ResponseField name="descripcion" type="string" required>
+  Service description. Maximum 500 characters.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of when the service was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of when the service was last updated.
+</ResponseField>
+
+<ResponseField name="__v" type="number">
+  MongoDB version key.
+</ResponseField>
+
+### Success Response (200 OK)
+
+```json
+[
+  {
+    "_id": "507f1f77bcf86cd799439011",
+    "imagen": "https://ejemplo.com/premium.jpg",
+    "titulo": "Plan Premium",
+    "precio": 9.99,
+    "descuento": 15,
+    "descripcion": "Acceso completo a todos los canales HD y contenido exclusivo",
+    "createdAt": "2026-03-13T10:30:00.000Z",
+    "updatedAt": "2026-03-13T10:30:00.000Z",
+    "__v": 0
+  },
+  {
+    "_id": "507f1f77bcf86cd799439012",
+    "imagen": "https://ejemplo.com/basico.jpg",
+    "titulo": "Plan Básico",
+    "precio": 4.99,
+    "descuento": 0,
+    "descripcion": "Canales básicos en calidad estándar",
+    "createdAt": "2026-03-12T08:15:00.000Z",
+    "updatedAt": "2026-03-12T08:15:00.000Z",
+    "__v": 0
+  }
+]
+```
+
+### Error Response (500 Internal Server Error)
+
+```json
+{
+  "message": "Error al obtener los servicios",
+  "error": "Connection to database failed"
+}
+```
+
+## Implementation
+
+Controller function at `/home/daytona/workspace/source/astro_backend/src/controllers/serviceController.js:5-12`:
+
+```javascript
+export const getServices = async (_req, res) => {
+  try {
+    const services = await Service.find().sort({ createdAt: -1 });
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener los servicios', error: error.message });
+  }
+};
+```
+
+## Sorting
+
+Services are automatically sorted by `createdAt` in descending order (`-1`), meaning the most recently created services appear first in the array.
+
+## Notes
+
+- Returns an empty array `[]` if no services exist in the database
+- No pagination is currently implemented
+- All fields from the Service model are included in the response

@@ -1,0 +1,442 @@
+---
+title: "Architecture"
+description: "Application structure and design patterns"
+---
+
+Astro Services follows a modern **three-tier architecture** that separates concerns between presentation, business logic, and data management layers. This design ensures maintainability, scalability, and clear separation of responsibilities.
+
+## System Overview
+
+The application is built as a full-stack JavaScript application with the following layers:
+
+<CardGroup cols={3}>
+  <Card title="Frontend" icon="react">
+    React 19 with Vite 7 and Tailwind CSS 4
+  </Card>
+  <Card title="Backend" icon="server">
+    Node.js with Express 4
+  </Card>
+  <Card title="Database" icon="database">
+    MongoDB with Mongoose 8
+  </Card>
+</CardGroup>
+
+## Project Structure
+
+The monorepo contains two main applications:
+
+```
+Proyecto_Astro/
+├── astro_services/          # Frontend application
+│   ├── src/
+│   │   ├── components/      # ServiceCard, ServiceGrid, Header, Footer
+│   │   ├── hooks/           # useServices (custom hook)
+│   │   ├── services/        # api.js (HTTP communication layer)
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
+│   ├── Dockerfile
+│   └── vite.config.js
+│
+├── astro_backend/           # Backend API
+│   ├── src/
+│   │   ├── config/          # db.js (MongoDB connection)
+│   │   ├── models/          # Service.js (Mongoose schema)
+│   │   ├── controllers/     # serviceController.js (CRUD logic)
+│   │   ├── routes/          # serviceRoutes.js (REST endpoints)
+│   │   ├── server.js        # Entry point
+│   │   └── seed.js          # Database seeding script
+│   ├── .env.example
+│   └── Dockerfile
+│
+└── docker-compose.yml       # Service orchestration
+```
+
+## Backend Architecture
+
+The backend follows the **MVC pattern** with a clear separation between routes, controllers, and models.
+
+### Request Flow
+
+```
+HTTP Request → Express Middleware → Routes → Controllers → Models → MongoDB
+                    ↓
+              (CORS, JSON)
+```
+
+### Layer Breakdown
+
+<Accordion title="Routes Layer (serviceRoutes.js)">
+  Routes define the API endpoints and map HTTP methods to controller functions:
+
+  ```javascript
+  import { Router } from 'express';
+  import {
+    getServices,
+    getServiceById,
+    createService,
+    updateService,
+    deleteService,
+  } from '../controllers/serviceController.js';
+
+  const router = Router();
+
+  router.route('/').get(getServices).post(createService);
+  router.route('/:id').get(getServiceById).put(updateService).delete(deleteService);
+
+  export default router;
+  ```
+
+  The routes are registered in `app.js` under the `/api/services` prefix.
+</Accordion>
+
+<Accordion title="Controllers Layer (serviceController.js)">
+  Controllers handle business logic and error handling:
+
+  ```javascript
+  // Get all services
+  export const getServices = async (_req, res) => {
+    try {
+      const services = await Service.find().sort({ createdAt: -1 });
+      res.json(services);
+    } catch (error) {
+      res.status(500).json({ 
+        message: 'Error al obtener los servicios', 
+        error: error.message 
+      });
+    }
+  };
+
+  // Create new service
+  export const createService = async (req, res) => {
+    try {
+      const service = await Service.create(req.body);
+      res.status(201).json(service);
+    } catch (error) {
+      res.status(400).json({ 
+        message: 'Error al crear el servicio', 
+        error: error.message 
+      });
+    }
+  };
+  ```
+
+  Controllers implement all CRUD operations: `getServices`, `getServiceById`, `createService`, `updateService`, and `deleteService`.
+</Accordion>
+
+<Accordion title="Models Layer (Service.js)">
+  Models define the database schema and validation rules using Mongoose:
+
+  ```javascript
+  const serviceSchema = new mongoose.Schema(
+    {
+      imagen: {
+        type: String,
+        required: [true, 'La URL de la imagen es obligatoria'],
+        trim: true,
+      },
+      titulo: {
+        type: String,
+        required: [true, 'El título del servicio es obligatorio'],
+        trim: true,
+        maxlength: [120, 'El título no puede exceder 120 caracteres'],
+      },
+      precio: {
+        type: Number,
+        required: [true, 'El precio es obligatorio'],
+        min: [0, 'El precio no puede ser negativo'],
+      },
+      descuento: {
+        type: Number,
+        default: 0,
+        min: [0, 'El descuento no puede ser negativo'],
+        max: [100, 'El descuento no puede superar el 100%'],
+      },
+      descripcion: {
+        type: String,
+        required: [true, 'La descripción es obligatoria'],
+        trim: true,
+        maxlength: [500, 'La descripción no puede exceder 500 caracteres'],
+      },
+    },
+    {
+      timestamps: true,
+    }
+  );
+  ```
+
+  The schema includes automatic timestamps (`createdAt`, `updatedAt`) and comprehensive validation rules.
+</Accordion>
+
+### Application Entry Points
+
+<Steps>
+  <Step title="server.js">
+    Initializes the database connection and starts the Express server:
+    
+    ```javascript
+    import 'dotenv/config';
+    import connectDB from './config/db.js';
+    import app from './app.js';
+
+    const PORT = process.env.PORT || 5000;
+
+    const startServer = async () => {
+      await connectDB();
+      app.listen(PORT, () => {
+        console.log(`Servidor corriendo en http://localhost:${PORT}`);
+      });
+    };
+
+    startServer();
+    ```
+  </Step>
+
+  <Step title="app.js">
+    Configures Express middleware and routes:
+    
+    ```javascript
+    import express from 'express';
+    import cors from 'cors';
+    import serviceRoutes from './routes/serviceRoutes.js';
+
+    const app = express();
+
+    // Middlewares
+    app.use(cors({
+      origin: process.env.FRONTEND_URL || '*',
+      credentials: true,
+    }));
+    app.use(express.json());
+
+    // Routes
+    app.use('/api/services', serviceRoutes);
+
+    // Health check
+    app.get('/api/health', (_req, res) => {
+      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+
+    export default app;
+    ```
+  </Step>
+
+  <Step title="config/db.js">
+    Manages MongoDB connection with DNS configuration for MongoDB Atlas:
+    
+    ```javascript
+    import dns from 'node:dns';
+    import mongoose from 'mongoose';
+
+    // Force Google DNS for resolving Atlas SRV records
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+    const connectDB = async () => {
+      try {
+        const conn = await mongoose.connect(process.env.MONGODB_URI);
+        console.log(`MongoDB conectado: ${conn.connection.host}`);
+      } catch (error) {
+        console.error(`Error de conexión a MongoDB: ${error.message}`);
+        process.exit(1);
+      }
+    };
+
+    export default connectDB;
+    ```
+  </Step>
+</Steps>
+
+## Frontend Architecture
+
+The frontend uses a **component-based architecture** with React, organized into distinct layers for components, hooks, and services.
+
+### Application Layers
+
+<CardGroup cols={3}>
+  <Card title="Components" icon="puzzle-piece">
+    Reusable UI components like ServiceCard, ServiceGrid, Header, and Footer
+  </Card>
+  <Card title="Hooks" icon="link">
+    Custom React hooks for state management and side effects
+  </Card>
+  <Card title="Services" icon="cloud">
+    API communication layer for HTTP requests
+  </Card>
+</CardGroup>
+
+### API Communication Layer
+
+The `services/api.js` file provides a centralized HTTP client:
+
+```javascript
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+
+/**
+ * Fetch all services from the API
+ */
+export const fetchServices = async () => {
+  const response = await fetch(`${API_BASE_URL}/services`);
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: No se pudieron obtener los servicios`);
+  }
+  return response.json();
+};
+
+/**
+ * Fetch a single service by ID
+ */
+export const fetchServiceById = async (id) => {
+  const response = await fetch(`${API_BASE_URL}/services/${id}`);
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: Servicio no encontrado`);
+  }
+  return response.json();
+};
+```
+
+Key features:
+- **Environment-aware**: Different base URLs for development and production
+- **Error handling**: Throws descriptive errors for non-OK responses
+- **Type safety**: JSDoc comments for better IDE support
+
+### Custom Hooks Layer
+
+The `useServices` hook encapsulates data fetching logic:
+
+```javascript
+import { useState, useEffect } from 'react';
+import { fetchServices } from '../services/api';
+
+const useServices = () => {
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchServices();
+        setServices(data);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
+
+  return { services, loading, error };
+};
+
+export default useServices;
+```
+
+This hook:
+- Manages loading, error, and data states
+- Automatically fetches data on mount
+- Provides a clean interface for components
+
+## Data Flow
+
+The complete request-response cycle:
+
+<Steps>
+  <Step title="User Interaction">
+    User interacts with React component (e.g., page load, button click)
+  </Step>
+
+  <Step title="Hook Invocation">
+    Component calls `useServices` hook which triggers `fetchServices` from the API service layer
+  </Step>
+
+  <Step title="HTTP Request">
+    API service sends GET request to `http://localhost:5000/api/services`
+  </Step>
+
+  <Step title="Express Routing">
+    Express receives request → CORS middleware → JSON middleware → routes to `serviceRoutes`
+  </Step>
+
+  <Step title="Controller Processing">
+    Controller (`getServices`) executes business logic and queries the database
+  </Step>
+
+  <Step title="Database Query">
+    Mongoose model queries MongoDB and returns documents sorted by `createdAt`
+  </Step>
+
+  <Step title="Response">
+    Data flows back: MongoDB → Model → Controller → Express → Frontend → Component → User
+  </Step>
+</Steps>
+
+## Environment Configuration
+
+Both applications use environment variables for configuration:
+
+### Backend (.env)
+
+```bash
+PORT=5000
+MONGODB_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/astroservicesdb
+FRONTEND_URL=http://localhost:5173
+```
+
+### Frontend (.env)
+
+```bash
+VITE_API_URL=http://localhost:5000/api
+```
+
+## Deployment Architecture
+
+The application supports multiple deployment strategies:
+
+<Accordion title="Docker Compose">
+  Three containers orchestrated together:
+  
+  - **astro_mongo**: MongoDB instance on port 27017
+  - **astro_backend**: Express API on port 5000
+  - **astro_frontend**: Vite dev server on port 80
+
+  ```bash
+  docker-compose up --build
+  ```
+</Accordion>
+
+<Accordion title="Standalone Deployment">
+  Each application can run independently:
+  
+  - Backend: `npm run dev` in astro_backend/
+  - Frontend: `npm run dev` in astro_services/
+  - Database: MongoDB Atlas cloud instance
+</Accordion>
+
+## Design Patterns
+
+The application implements several software design patterns:
+
+| Pattern | Location | Purpose |
+|---------|----------|---------|
+| **MVC** | Backend | Separates routes, controllers, and models |
+| **Repository** | Models | Encapsulates data access logic |
+| **Dependency Injection** | Controllers | Models are imported as dependencies |
+| **Custom Hooks** | Frontend | Reusable stateful logic |
+| **Service Layer** | api.js | Centralized HTTP communication |
+| **Environment Variables** | Config | Externalized configuration |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Testing" icon="vial" href="/development/testing">
+    Learn about the testing strategy and how to run tests
+  </Card>
+  <Card title="Database Seeding" icon="seedling" href="/development/seeding">
+    Understand how to populate the database with sample data
+  </Card>
+</CardGroup>

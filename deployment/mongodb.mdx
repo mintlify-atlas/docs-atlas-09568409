@@ -1,0 +1,597 @@
+---
+title: "MongoDB Configuration"
+description: "Database setup and configuration for Astro Services"
+---
+
+## Overview
+
+Astro Services uses MongoDB as its primary database for storing service records. This guide covers both local development setup with Docker and production deployment with MongoDB Atlas.
+
+## Database Information
+
+- **Database Name**: `astro_services`
+- **Default Connection**: `mongodb://mongo:27017/astro_services` (Docker)
+- **MongoDB Version**: 7.x
+- **Driver**: Mongoose 8.9.5
+
+## Local Development Setup
+
+### Using Docker Compose
+
+The recommended approach for local development is using the provided Docker Compose configuration:
+
+```yaml docker-compose.yml
+mongo:
+  image: mongo:7
+  container_name: astro_mongo
+  ports:
+    - '27017:27017'
+  volumes:
+    - mongo_data:/data/db
+```
+
+<Steps>
+  <Step title="Start MongoDB Container">
+    Start the MongoDB service along with the application:
+    ```bash
+    docker-compose up -d mongo
+    ```
+
+    Or start all services:
+    ```bash
+    docker-compose up -d
+    ```
+  </Step>
+
+  <Step title="Verify Connection">
+    Check that MongoDB is running:
+    ```bash
+    docker-compose ps mongo
+    ```
+
+    Test the connection:
+    ```bash
+    docker-compose exec mongo mongosh
+    ```
+  </Step>
+
+  <Step title="Seed Initial Data">
+    If your backend includes a seed script, populate the database:
+    ```bash
+    docker-compose exec backend npm run seed
+    ```
+  </Step>
+</Steps>
+
+### Standalone MongoDB Installation
+
+For development without Docker, install MongoDB locally:
+
+<Accordion title="macOS Installation">
+  Using Homebrew:
+  ```bash
+  brew tap mongodb/brew
+  brew install mongodb-community@7.0
+  brew services start mongodb-community@7.0
+  ```
+
+  Verify installation:
+  ```bash
+  mongosh --version
+  ```
+</Accordion>
+
+<Accordion title="Ubuntu/Debian Installation">
+  Import MongoDB GPG key and add repository:
+  ```bash
+  wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+  echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+  ```
+
+  Install and start MongoDB:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y mongodb-org
+  sudo systemctl start mongod
+  sudo systemctl enable mongod
+  ```
+</Accordion>
+
+<Accordion title="Windows Installation">
+  1. Download MongoDB Community Server from [mongodb.com/try/download/community](https://www.mongodb.com/try/download/community)
+  2. Run the installer and choose "Complete" installation
+  3. Install as a Windows Service
+  4. MongoDB Compass (GUI) is included by default
+
+  Verify installation:
+  ```powershell
+  mongosh --version
+  ```
+</Accordion>
+
+## MongoDB Atlas (Production)
+
+MongoDB Atlas is a fully managed cloud database service, recommended for production deployments.
+
+<Steps>
+  <Step title="Create Atlas Account">
+    Sign up for a free account at [mongodb.com/cloud/atlas/register](https://www.mongodb.com/cloud/atlas/register)
+
+    The free tier (M0) includes:
+    - 512 MB storage
+    - Shared RAM
+    - Suitable for development and small applications
+  </Step>
+
+  <Step title="Create a Cluster">
+    1. Click "Build a Database"
+    2. Choose a cluster tier (M0 for free tier)
+    3. Select a cloud provider and region
+    4. Name your cluster (e.g., `astro-services-cluster`)
+    5. Click "Create Cluster"
+  </Step>
+
+  <Step title="Configure Network Access">
+    1. Navigate to "Network Access" in the left sidebar
+    2. Click "Add IP Address"
+    3. Add your application server's IP address
+    4. For development, you can temporarily use `0.0.0.0/0` (allow all)
+
+    <Warning>
+      Never use `0.0.0.0/0` in production. Always whitelist specific IP addresses for security.
+    </Warning>
+  </Step>
+
+  <Step title="Create Database User">
+    1. Navigate to "Database Access"
+    2. Click "Add New Database User"
+    3. Choose "Password" authentication
+    4. Enter username and generate a strong password
+    5. Grant "Read and write to any database" role
+    6. Click "Add User"
+
+    <Note>
+      Save the credentials securely. You'll need them for the connection string.
+    </Note>
+  </Step>
+
+  <Step title="Get Connection String">
+    1. Click "Connect" on your cluster
+    2. Choose "Connect your application"
+    3. Select "Node.js" as the driver and version "4.1 or later"
+    4. Copy the connection string
+
+    It will look like:
+    ```
+    mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/<dbname>?retryWrites=true&w=majority
+    ```
+  </Step>
+
+  <Step title="Configure Environment Variable">
+    Update your `MONGODB_URI` environment variable with the Atlas connection string:
+
+    ```bash
+    MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/astro_services?retryWrites=true&w=majority
+    ```
+
+    Replace:
+    - `<username>` with your database user
+    - `<password>` with the user's password
+    - `<dbname>` with `astro_services`
+  </Step>
+</Steps>
+
+## Connection Configuration
+
+The application connects to MongoDB using Mongoose in the `db.js` configuration file:
+
+```javascript astro_backend/src/config/db.js
+import dns from 'node:dns';
+import mongoose from 'mongoose';
+
+// Force Google DNS to resolve Atlas SRV records
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    console.log(`MongoDB conectado: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`Error de conexión a MongoDB: ${error.message}`);
+    process.exit(1);
+  }
+};
+
+export default connectDB;
+```
+
+### Connection String Formats
+
+<CodeGroup>
+
+```bash Docker (Local)
+MONGODB_URI=mongodb://mongo:27017/astro_services
+```
+
+```bash Standalone (Local)
+MONGODB_URI=mongodb://localhost:27017/astro_services
+```
+
+```bash MongoDB Atlas (Cloud)
+MONGODB_URI=mongodb+srv://username:password@cluster.xxxxx.mongodb.net/astro_services?retryWrites=true&w=majority
+```
+
+```bash Atlas with Additional Options
+MONGODB_URI=mongodb+srv://username:password@cluster.xxxxx.mongodb.net/astro_services?retryWrites=true&w=majority&appName=AstroServices
+```
+
+</CodeGroup>
+
+### DNS Configuration
+
+The application sets Google's public DNS servers (`8.8.8.8` and `8.8.4.4`) to ensure reliable resolution of MongoDB Atlas SRV records:
+
+```javascript
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+```
+
+This is particularly important when connecting to MongoDB Atlas from environments with restrictive or unreliable DNS servers.
+
+<Note>
+  This DNS configuration only affects the Node.js process, not the entire system.
+</Note>
+
+## Database Schema
+
+The application uses a single `Service` collection with the following schema:
+
+```javascript astro_backend/src/models/Service.js
+import mongoose from 'mongoose';
+
+const serviceSchema = new mongoose.Schema(
+  {
+    imagen: {
+      type: String,
+      required: [true, 'La URL de la imagen es obligatoria'],
+      trim: true,
+    },
+    titulo: {
+      type: String,
+      required: [true, 'El título del servicio es obligatorio'],
+      trim: true,
+      maxlength: [120, 'El título no puede exceder 120 caracteres'],
+    },
+    precio: {
+      type: Number,
+      required: [true, 'El precio es obligatorio'],
+      min: [0, 'El precio no puede ser negativo'],
+    },
+    descuento: {
+      type: Number,
+      default: 0,
+      min: [0, 'El descuento no puede ser negativo'],
+      max: [100, 'El descuento no puede superar el 100%'],
+    },
+    descripcion: {
+      type: String,
+      required: [true, 'La descripción es obligatoria'],
+      trim: true,
+      maxlength: [500, 'La descripción no puede exceder 500 caracteres'],
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const Service = mongoose.model('Service', serviceSchema);
+
+export default Service;
+```
+
+### Collections
+
+| Collection | Purpose                                    |
+|------------|--------------------------------------------|
+| `services` | Stores all service records with metadata   |
+
+Mongoose automatically pluralizes model names, so the `Service` model maps to the `services` collection.
+
+### Schema Fields
+
+| Field         | Type   | Required | Constraints                      |
+|---------------|--------|----------|----------------------------------|
+| `imagen`      | String | Yes      | URL to service image             |
+| `titulo`      | String | Yes      | Max 120 characters               |
+| `precio`      | Number | Yes      | Must be >= 0                     |
+| `descuento`   | Number | No       | 0-100 range, defaults to 0       |
+| `descripcion` | String | Yes      | Max 500 characters               |
+| `createdAt`   | Date   | Auto     | Timestamp (auto-generated)       |
+| `updatedAt`   | Date   | Auto     | Timestamp (auto-generated)       |
+
+## Indexes
+
+While the current schema doesn't define explicit indexes, consider adding these for production:
+
+```javascript
+// Add to Service.js after schema definition
+serviceSchema.index({ titulo: 'text', descripcion: 'text' });
+serviceSchema.index({ precio: 1 });
+serviceSchema.index({ createdAt: -1 });
+```
+
+Create indexes via MongoDB shell:
+
+```javascript
+use astro_services
+
+// Text search index
+db.services.createIndex(
+  { titulo: "text", descripcion: "text" },
+  { name: "service_text_search" }
+)
+
+// Price range queries
+db.services.createIndex({ precio: 1 })
+
+// Recent services first
+db.services.createIndex({ createdAt: -1 })
+```
+
+## Database Operations
+
+### MongoDB Shell Access
+
+<CodeGroup>
+
+```bash Docker
+docker-compose exec mongo mongosh astro_services
+```
+
+```bash Local Installation
+mongosh astro_services
+```
+
+```bash MongoDB Atlas
+mongosh "mongodb+srv://cluster.xxxxx.mongodb.net/astro_services" --username your_username
+```
+
+</CodeGroup>
+
+### Common Queries
+
+```javascript
+// View all services
+db.services.find().pretty()
+
+// Count total services
+db.services.countDocuments()
+
+// Find services by price range
+db.services.find({ precio: { $gte: 100, $lte: 500 } })
+
+// Find services with discounts
+db.services.find({ descuento: { $gt: 0 } })
+
+// Full text search
+db.services.find({ $text: { $search: "desarrollo web" } })
+
+// Get most recent services
+db.services.find().sort({ createdAt: -1 }).limit(10)
+```
+
+## Backup and Restore
+
+### Local Backup (Docker)
+
+<Steps>
+  <Step title="Create Backup">
+    ```bash
+    docker-compose exec mongo mongodump --db=astro_services --out=/data/db/backup
+    ```
+
+    This creates a backup inside the container at `/data/db/backup`.
+  </Step>
+
+  <Step title="Copy Backup to Host">
+    ```bash
+    docker cp astro_mongo:/data/db/backup ./backup
+    ```
+  </Step>
+
+  <Step title="Restore from Backup">
+    ```bash
+    docker cp ./backup astro_mongo:/data/db/restore
+    docker-compose exec mongo mongorestore --db=astro_services /data/db/restore/astro_services
+    ```
+  </Step>
+</Steps>
+
+### MongoDB Atlas Backup
+
+Atlas provides automated backups with point-in-time recovery:
+
+1. Navigate to your cluster in Atlas
+2. Click on "Backup" tab
+3. Enable "Continuous Cloud Backup" (paid tiers) or "Basic Backup" (free tier)
+4. Configure backup schedule and retention period
+5. Restore from the "Restore" button when needed
+
+<Warning>
+  Free tier (M0) clusters have limited backup capabilities. Consider upgrading for production workloads.
+</Warning>
+
+### Manual Export/Import
+
+Export to JSON:
+```bash
+docker-compose exec mongo mongoexport --db=astro_services --collection=services --out=/data/db/services.json --jsonArray
+```
+
+Import from JSON:
+```bash
+docker-compose exec mongo mongoimport --db=astro_services --collection=services --file=/data/db/services.json --jsonArray
+```
+
+## Security Best Practices
+
+<Warning>
+  The default Docker configuration has no authentication. Always enable authentication for production deployments.
+</Warning>
+
+### Enable Authentication (Docker)
+
+Update `docker-compose.yml`:
+
+```yaml
+mongo:
+  image: mongo:7
+  container_name: astro_mongo
+  environment:
+    - MONGO_INITDB_ROOT_USERNAME=admin
+    - MONGO_INITDB_ROOT_PASSWORD=secure_password_here
+    - MONGO_INITDB_DATABASE=astro_services
+  ports:
+    - '27017:27017'
+  volumes:
+    - mongo_data:/data/db
+```
+
+Update connection string:
+```bash
+MONGODB_URI=mongodb://admin:secure_password_here@mongo:27017/astro_services?authSource=admin
+```
+
+### Security Checklist
+
+- [ ] Enable authentication with strong passwords
+- [ ] Use environment variables for credentials (never hardcode)
+- [ ] Restrict network access to specific IPs
+- [ ] Enable SSL/TLS for connections
+- [ ] Regularly update MongoDB to latest stable version
+- [ ] Configure role-based access control (RBAC)
+- [ ] Enable audit logging (Enterprise/Atlas)
+- [ ] Implement regular automated backups
+- [ ] Monitor database performance and security events
+- [ ] Encrypt data at rest (Atlas automatic, configure for self-hosted)
+
+## Monitoring and Performance
+
+### Monitor Connection Status
+
+The application logs connection status on startup:
+
+```
+MongoDB conectado: cluster0-shard-00-01.xxxxx.mongodb.net
+```
+
+Connection errors will display:
+```
+Error de conexión a MongoDB: <error message>
+```
+
+### MongoDB Atlas Monitoring
+
+Atlas provides built-in monitoring dashboards:
+
+1. Navigate to your cluster
+2. Click "Metrics" tab
+3. Monitor:
+   - Operations per second
+   - Connections
+   - Network I/O
+   - Query performance
+   - Storage usage
+
+### Performance Optimization
+
+1. **Use Indexes**: Create indexes for frequently queried fields
+2. **Limit Results**: Use `.limit()` to restrict large result sets
+3. **Select Fields**: Project only needed fields with `.select()`
+4. **Connection Pooling**: Mongoose manages this automatically
+5. **Enable Caching**: Implement Redis for frequently accessed data
+
+Example optimized query:
+```javascript
+// Instead of:
+const services = await Service.find();
+
+// Use:
+const services = await Service.find()
+  .select('titulo precio imagen')
+  .limit(20)
+  .lean();
+```
+
+## Troubleshooting
+
+<Accordion title="Connection timeout or refused">
+  **Check MongoDB is running:**
+  ```bash
+  docker-compose ps mongo
+  ```
+
+  **Verify connection string format:**
+  - Docker: `mongodb://mongo:27017/astro_services`
+  - Local: `mongodb://localhost:27017/astro_services`
+  - Atlas: Must include credentials and proper hostname
+
+  **Test network connectivity:**
+  ```bash
+  docker-compose exec backend ping mongo
+  ```
+</Accordion>
+
+<Accordion title="Authentication failed">
+  If you've enabled authentication, ensure:
+  - Username and password are correct
+  - Connection string includes credentials
+  - `authSource` parameter is set correctly
+  - User has appropriate permissions
+
+  Format with authentication:
+  ```
+  mongodb://username:password@host:port/database?authSource=admin
+  ```
+</Accordion>
+
+<Accordion title="Database not found">
+  MongoDB creates databases automatically when first document is inserted. If the database doesn't exist:
+
+  ```bash
+  docker-compose exec backend npm run seed
+  ```
+
+  Or manually insert a document via MongoDB shell.
+</Accordion>
+
+<Accordion title="Mongoose version incompatibility">
+  Ensure you're using a compatible MongoDB version:
+  - Mongoose 8.x requires MongoDB 4.0+
+  - MongoDB 7 is fully supported
+
+  Check versions:
+  ```bash
+  docker-compose exec mongo mongosh --eval "db.version()"
+  ```
+</Accordion>
+
+<Accordion title="Atlas connection issues">
+  Common Atlas connection problems:
+
+  1. **IP not whitelisted**: Add your IP in Network Access
+  2. **DNS resolution failure**: The app uses Google DNS (8.8.8.8) to resolve Atlas SRV records
+  3. **Incorrect credentials**: Double-check username and password
+  4. **Firewall blocking**: Ensure outbound connections to MongoDB ports are allowed
+
+  Test Atlas connection:
+  ```bash
+  mongosh "your-connection-string-here"
+  ```
+</Accordion>
+
+## Next Steps
+
+- Configure [Environment Variables](/deployment/environment) for database connections
+- Review the [Docker Deployment](/deployment/docker) guide
+- Explore the [API Reference](/api/overview) for service operations

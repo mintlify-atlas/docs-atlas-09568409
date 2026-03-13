@@ -1,0 +1,505 @@
+---
+title: "Database Seeding"
+description: "Populate database with sample data"
+---
+
+Database seeding allows you to quickly populate your MongoDB database with sample services for development and testing. The seed script clears existing data and inserts predefined service entries.
+
+## Quick Start
+
+Run the seed script from the backend directory:
+
+```bash
+cd astro_backend
+npm run seed
+```
+
+This command will:
+1. Connect to your MongoDB database
+2. Clear all existing services
+3. Insert 6 sample services
+4. Close the connection
+
+## Seed Script Overview
+
+The seed script is located at `astro_backend/src/seed.js` and uses Mongoose to interact with MongoDB.
+
+### Full Seed Script
+
+```javascript
+import 'dotenv/config';
+import dns from 'node:dns';
+import mongoose from 'mongoose';
+import Service from './models/Service.js';
+
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+const sampleServices = [
+  {
+    imagen: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop',
+    titulo: 'Netflix Premium',
+    precio: 5.99,
+    descuento: 20,
+    descripcion: 'Pantalla completa en 4K Ultra HD. Acceso a todo el catálogo sin restricciones. Hasta 4 dispositivos simultáneos.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1574375927938-d5a98e8d7e28?w=400&h=300&fit=crop',
+    titulo: 'Disney+ Premium',
+    precio: 4.99,
+    descuento: 15,
+    descripcion: 'Todo el contenido de Disney, Marvel, Star Wars y National Geographic. Calidad 4K HDR con Dolby Atmos.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400&h=300&fit=crop',
+    titulo: 'HBO Max',
+    precio: 5.49,
+    descuento: 10,
+    descripcion: 'Series exclusivas, películas de estreno y documentales. Contenido de Warner Bros, DC y más.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&h=300&fit=crop',
+    titulo: 'Spotify Premium',
+    precio: 3.49,
+    descuento: 0,
+    descripcion: 'Música sin anuncios ni interrupciones. Descarga y escucha offline. Calidad de audio superior.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1615986201152-7686a4867f30?w=400&h=300&fit=crop',
+    titulo: 'IPTV Full HD',
+    precio: 8.99,
+    descuento: 25,
+    descripcion: 'Más de 5000 canales en vivo de todo el mundo. Deportes, películas, series y más. Guía EPG incluida.',
+  },
+  {
+    imagen: 'https://images.unsplash.com/photo-1586899028174-e7098604235b?w=400&h=300&fit=crop',
+    titulo: 'Amazon Prime Video',
+    precio: 4.49,
+    descuento: 5,
+    descripcion: 'Catálogo exclusivo de series y películas originales. Incluye canales adicionales y contenido en 4K.',
+  },
+];
+
+const seedDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('MongoDB conectado para seeding...');
+
+    await Service.deleteMany({});
+    console.log('Colección de servicios limpiada.');
+
+    const created = await Service.insertMany(sampleServices);
+    console.log(`${created.length} servicios insertados correctamente.`);
+
+    await mongoose.connection.close();
+    console.log('Conexión cerrada. Seed completado.');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error durante el seed:', error.message);
+    process.exit(1);
+  }
+};
+
+seedDB();
+```
+
+## Seeding Process
+
+<Steps>
+  <Step title="Configure DNS">
+    Sets Google DNS servers to resolve MongoDB Atlas SRV records:
+    
+    ```javascript
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+    ```
+    
+    This ensures reliable DNS resolution for MongoDB Atlas connections.
+  </Step>
+
+  <Step title="Connect to MongoDB">
+    Establishes connection using the URI from environment variables:
+    
+    ```javascript
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('MongoDB conectado para seeding...');
+    ```
+    
+    Make sure your `.env` file has the correct `MONGODB_URI`.
+  </Step>
+
+  <Step title="Clear Existing Data">
+    Removes all existing services to start fresh:
+    
+    ```javascript
+    await Service.deleteMany({});
+    console.log('Colección de servicios limpiada.');
+    ```
+    
+    **Warning**: This deletes all services in the database.
+  </Step>
+
+  <Step title="Insert Sample Services">
+    Inserts the 6 predefined services:
+    
+    ```javascript
+    const created = await Service.insertMany(sampleServices);
+    console.log(`${created.length} servicios insertados correctamente.`);
+    ```
+  </Step>
+
+  <Step title="Close Connection">
+    Properly closes the MongoDB connection and exits:
+    
+    ```javascript
+    await mongoose.connection.close();
+    console.log('Conexión cerrada. Seed completado.');
+    process.exit(0);
+    ```
+  </Step>
+</Steps>
+
+## Sample Services Data
+
+The seed script inserts 6 streaming services with realistic data:
+
+<Accordion title="Netflix Premium - $5.99 (20% off)">
+  ```json
+  {
+    "imagen": "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop",
+    "titulo": "Netflix Premium",
+    "precio": 5.99,
+    "descuento": 20,
+    "descripcion": "Pantalla completa en 4K Ultra HD. Acceso a todo el catálogo sin restricciones. Hasta 4 dispositivos simultáneos."
+  }
+  ```
+</Accordion>
+
+<Accordion title="Disney+ Premium - $4.99 (15% off)">
+  ```json
+  {
+    "imagen": "https://images.unsplash.com/photo-1574375927938-d5a98e8d7e28?w=400&h=300&fit=crop",
+    "titulo": "Disney+ Premium",
+    "precio": 4.99,
+    "descuento": 15,
+    "descripcion": "Todo el contenido de Disney, Marvel, Star Wars y National Geographic. Calidad 4K HDR con Dolby Atmos."
+  }
+  ```
+</Accordion>
+
+<Accordion title="HBO Max - $5.49 (10% off)">
+  ```json
+  {
+    "imagen": "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400&h=300&fit=crop",
+    "titulo": "HBO Max",
+    "precio": 5.49,
+    "descuento": 10,
+    "descripcion": "Series exclusivas, películas de estreno y documentales. Contenido de Warner Bros, DC y más."
+  }
+  ```
+</Accordion>
+
+<Accordion title="Spotify Premium - $3.49 (No discount)">
+  ```json
+  {
+    "imagen": "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&h=300&fit=crop",
+    "titulo": "Spotify Premium",
+    "precio": 3.49,
+    "descuento": 0,
+    "descripcion": "Música sin anuncios ni interrupciones. Descarga y escucha offline. Calidad de audio superior."
+  }
+  ```
+</Accordion>
+
+<Accordion title="IPTV Full HD - $8.99 (25% off)">
+  ```json
+  {
+    "imagen": "https://images.unsplash.com/photo-1615986201152-7686a4867f30?w=400&h=300&fit=crop",
+    "titulo": "IPTV Full HD",
+    "precio": 8.99,
+    "descuento": 25,
+    "descripcion": "Más de 5000 canales en vivo de todo el mundo. Deportes, películas, series y más. Guía EPG incluida."
+  }
+  ```
+</Accordion>
+
+<Accordion title="Amazon Prime Video - $4.49 (5% off)">
+  ```json
+  {
+    "imagen": "https://images.unsplash.com/photo-1586899028174-e7098604235b?w=400&h=300&fit=crop",
+    "titulo": "Amazon Prime Video",
+    "precio": 4.49,
+    "descuento": 5,
+    "descripcion": "Catálogo exclusivo de series y películas originales. Incluye canales adicionales y contenido en 4K."
+  }
+  ```
+</Accordion>
+
+## Service Schema Structure
+
+Each service follows the Mongoose schema defined in `Service.js`:
+
+| Field | Type | Required | Validation |
+|-------|------|----------|------------|
+| `imagen` | String | Yes | Valid URL, trimmed |
+| `titulo` | String | Yes | Max 120 characters, trimmed |
+| `precio` | Number | Yes | Minimum 0 |
+| `descuento` | Number | No | 0-100, defaults to 0 |
+| `descripcion` | String | Yes | Max 500 characters, trimmed |
+
+Timestamps (`createdAt`, `updatedAt`) are automatically added by Mongoose.
+
+## Running the Seed Script
+
+### Prerequisites
+
+Ensure you have:
+
+1. **MongoDB connection configured** in `.env`:
+   ```env
+   MONGODB_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/astroservicesdb
+   ```
+
+2. **Dependencies installed**:
+   ```bash
+   cd astro_backend
+   npm install
+   ```
+
+### Execute Seeding
+
+```bash
+npm run seed
+```
+
+### Expected Output
+
+```
+MongoDB conectado para seeding...
+Colección de servicios limpiada.
+6 servicios insertados correctamente.
+Conexión cerrada. Seed completado.
+```
+
+## Verifying Seeded Data
+
+After seeding, verify the data was inserted correctly:
+
+<Steps>
+  <Step title="Start the Backend Server">
+    ```bash
+    npm run dev
+    ```
+  </Step>
+
+  <Step title="Query the API">
+    Use curl or a browser to fetch services:
+    
+    ```bash
+    curl http://localhost:5000/api/services
+    ```
+    
+    You should see all 6 services in the JSON response.
+  </Step>
+
+  <Step title="Check MongoDB Directly">
+    Using MongoDB Compass or the CLI:
+    
+    ```javascript
+    use astroservicesdb
+    db.services.find().pretty()
+    ```
+    
+    This displays all documents in the services collection.
+  </Step>
+
+  <Step title="View in Frontend">
+    Start the frontend application:
+    
+    ```bash
+    cd ../astro_services
+    npm run dev
+    ```
+    
+    Visit `http://localhost:5173` to see the services displayed as cards.
+  </Step>
+</Steps>
+
+## Customizing Seed Data
+
+To add or modify services, edit the `sampleServices` array:
+
+```javascript
+const sampleServices = [
+  {
+    imagen: 'https://your-image-url.com/service.jpg',
+    titulo: 'Your Service Name',
+    precio: 9.99,
+    descuento: 15,
+    descripcion: 'Your service description here.',
+  },
+  // Add more services...
+];
+```
+
+### Image URLs
+
+All sample images use Unsplash with specific dimensions:
+
+```
+https://images.unsplash.com/photo-XXXXXXXXX?w=400&h=300&fit=crop
+```
+
+Parameters:
+- `w=400`: Width of 400 pixels
+- `h=300`: Height of 300 pixels
+- `fit=crop`: Crop to exact dimensions
+
+## Resetting the Database
+
+To completely reset and reseed the database:
+
+<Steps>
+  <Step title="Stop Running Servers">
+    Make sure no backend server is running to avoid connection conflicts.
+  </Step>
+
+  <Step title="Run Seed Script">
+    ```bash
+    npm run seed
+    ```
+    
+    This clears all existing services and inserts fresh sample data.
+  </Step>
+
+  <Step title="Restart Backend">
+    ```bash
+    npm run dev
+    ```
+    
+    Your application now has a fresh set of sample services.
+  </Step>
+</Steps>
+
+## Seed Script Configuration
+
+The script is configured in `package.json`:
+
+```json
+{
+  "scripts": {
+    "seed": "node src/seed.js"
+  }
+}
+```
+
+This runs the seed script using Node.js with ES module support.
+
+## Error Handling
+
+The seed script includes comprehensive error handling:
+
+```javascript
+try {
+  // Seeding operations
+} catch (error) {
+  console.error('Error durante el seed:', error.message);
+  process.exit(1);
+}
+```
+
+Common errors:
+
+<CardGroup cols={2}>
+  <Card title="Connection Failure" icon="plug-circle-xmark">
+    Check your `MONGODB_URI` in `.env` and ensure MongoDB is accessible
+  </Card>
+  <Card title="Validation Error" icon="triangle-exclamation">
+    Verify that all sample data meets the schema validation rules
+  </Card>
+  <Card title="DNS Resolution" icon="globe">
+    DNS servers are set to Google DNS to resolve Atlas SRV records
+  </Card>
+  <Card title="Permission Error" icon="lock">
+    Ensure your MongoDB user has write permissions to the database
+  </Card>
+</CardGroup>
+
+## Production Considerations
+
+<Warning>
+  The seed script **deletes all existing services** before inserting new ones. Never run this in production unless you intend to reset all data.
+</Warning>
+
+For production environments:
+
+1. **Create a separate seed script** that doesn't delete existing data
+2. **Use migrations** for data changes instead of seeding
+3. **Backup data** before running any seed operations
+4. **Use different sample data** to avoid copyright issues with service names
+
+## Advanced Seeding
+
+### Conditional Seeding
+
+Only seed if the database is empty:
+
+```javascript
+const seedDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    
+    const count = await Service.countDocuments();
+    if (count > 0) {
+      console.log('Database already has data. Skipping seed.');
+      process.exit(0);
+    }
+    
+    const created = await Service.insertMany(sampleServices);
+    console.log(`${created.length} servicios insertados correctamente.`);
+    
+    await mongoose.connection.close();
+  } catch (error) {
+    console.error('Error durante el seed:', error.message);
+    process.exit(1);
+  }
+};
+```
+
+### Incremental Seeding
+
+Add new services without deleting existing ones:
+
+```javascript
+// Remove the deleteMany() call
+// await Service.deleteMany({});
+
+// Insert new services
+const created = await Service.insertMany(sampleServices);
+```
+
+### Seeding with Relationships
+
+If you add related data models (users, categories, etc.), seed them in order:
+
+```javascript
+// Seed categories first
+const categories = await Category.insertMany(sampleCategories);
+
+// Then seed services with category references
+const services = await Service.insertMany(
+  sampleServices.map(s => ({
+    ...s,
+    category: categories[0]._id
+  }))
+);
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Learn about the application structure and data flow
+  </Card>
+  <Card title="Testing" icon="vial" href="/development/testing">
+    Understand the testing strategy and run tests
+  </Card>
+</CardGroup>

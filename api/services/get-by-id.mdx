@@ -1,0 +1,145 @@
+---
+title: Get Service by ID
+description: Retrieve a specific service by its ID
+---
+
+Retrieves a single service by its unique MongoDB ObjectId.
+
+## Endpoint
+
+```
+GET /api/services/:id
+```
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The MongoDB ObjectId of the service to retrieve. Must be a valid 24-character hexadecimal string.
+</ParamField>
+
+### cURL Example
+
+```bash
+curl http://localhost:5000/api/services/507f1f77bcf86cd799439011
+```
+
+### JavaScript Example
+
+```javascript
+const serviceId = '507f1f77bcf86cd799439011';
+const response = await fetch(`http://localhost:5000/api/services/${serviceId}`);
+const service = await response.json();
+```
+
+## Response
+
+Returns a single service object.
+
+### Response Fields
+
+<ResponseField name="_id" type="string" required>
+  Unique MongoDB ObjectId for the service.
+</ResponseField>
+
+<ResponseField name="imagen" type="string" required>
+  URL of the service image.
+</ResponseField>
+
+<ResponseField name="titulo" type="string" required>
+  Service title or plan name. Maximum 120 characters.
+</ResponseField>
+
+<ResponseField name="precio" type="number" required>
+  Service price. Must be greater than or equal to 0.
+</ResponseField>
+
+<ResponseField name="descuento" type="number" required>
+  Discount percentage. Ranges from 0 to 100. Default is 0.
+</ResponseField>
+
+<ResponseField name="descripcion" type="string" required>
+  Service description. Maximum 500 characters.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 timestamp of when the service was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 timestamp of when the service was last updated.
+</ResponseField>
+
+<ResponseField name="__v" type="number">
+  MongoDB version key.
+</ResponseField>
+
+### Success Response (200 OK)
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://ejemplo.com/premium.jpg",
+  "titulo": "Plan Premium",
+  "precio": 9.99,
+  "descuento": 15,
+  "descripcion": "Acceso completo a todos los canales HD y contenido exclusivo",
+  "createdAt": "2026-03-13T10:30:00.000Z",
+  "updatedAt": "2026-03-13T10:30:00.000Z",
+  "__v": 0
+}
+```
+
+### Error Response (404 Not Found)
+
+Returned when no service exists with the specified ID:
+
+```json
+{
+  "message": "Servicio no encontrado"
+}
+```
+
+### Error Response (500 Internal Server Error)
+
+Returned for invalid ObjectId format or database errors:
+
+```json
+{
+  "message": "Error al obtener el servicio",
+  "error": "Cast to ObjectId failed for value \"invalid-id\" at path \"_id\""
+}
+```
+
+## Implementation
+
+Controller function at `/home/daytona/workspace/source/astro_backend/src/controllers/serviceController.js:16-26`:
+
+```javascript
+export const getServiceById = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ message: 'Servicio no encontrado' });
+    }
+    res.json(service);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener el servicio', error: error.message });
+  }
+};
+```
+
+## Error Cases
+
+| Scenario | Status Code | Response |
+|----------|-------------|----------|
+| Invalid ObjectId format | 500 | Error message with cast failure details |
+| Service not found | 404 | `{ "message": "Servicio no encontrado" }` |
+| Database connection error | 500 | Error message with connection details |
+
+## Notes
+
+- The `id` parameter must be a valid MongoDB ObjectId (24-character hexadecimal string)
+- Invalid ID formats will result in a 500 error with a cast failure message
+- Returns 404 if the ID format is valid but no matching service exists

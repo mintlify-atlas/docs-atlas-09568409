@@ -1,0 +1,387 @@
+---
+title: 'Data Model'
+description: 'MongoDB schema and data structure'
+---
+
+The Astro Services data model uses MongoDB with Mongoose ODM for schema validation and data management. The `Service` model defines the structure for streaming service offerings.
+
+## Service Schema
+
+**Location:** `src/models/Service.js`
+
+### Schema Definition
+
+```javascript
+import mongoose from 'mongoose';
+
+const serviceSchema = new mongoose.Schema(
+  {
+    imagen: {
+      type: String,
+      required: [true, 'La URL de la imagen es obligatoria'],
+      trim: true,
+    },
+    titulo: {
+      type: String,
+      required: [true, 'El título del servicio es obligatorio'],
+      trim: true,
+      maxlength: [120, 'El título no puede exceder 120 caracteres'],
+    },
+    precio: {
+      type: Number,
+      required: [true, 'El precio es obligatorio'],
+      min: [0, 'El precio no puede ser negativo'],
+    },
+    descuento: {
+      type: Number,
+      default: 0,
+      min: [0, 'El descuento no puede ser negativo'],
+      max: [100, 'El descuento no puede superar el 100%'],
+    },
+    descripcion: {
+      type: String,
+      required: [true, 'La descripción es obligatoria'],
+      trim: true,
+      maxlength: [500, 'La descripción no puede exceder 500 caracteres'],
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const Service = mongoose.model('Service', serviceSchema);
+```
+
+## Field Reference
+
+<ParamField path="imagen" type="String" required>
+  URL of the service image/logo
+  
+  - **Required:** Yes
+  - **Validation:** Must be a valid string
+  - **Transform:** `trim` removes leading/trailing whitespace
+  - **Error message:** "La URL de la imagen es obligatoria"
+  
+  ```json
+  "imagen": "https://example.com/netflix-logo.png"
+  ```
+</ParamField>
+
+<ParamField path="titulo" type="String" required>
+  Service name/title displayed to users
+  
+  - **Required:** Yes
+  - **Max length:** 120 characters
+  - **Transform:** `trim` removes leading/trailing whitespace
+  - **Error messages:**
+    - Required: "El título del servicio es obligatorio"
+    - Max length: "El título no puede exceder 120 caracteres"
+  
+  ```json
+  "titulo": "Netflix Premium 4K"
+  ```
+</ParamField>
+
+<ParamField path="precio" type="Number" required>
+  Base price in local currency (before discount)
+  
+  - **Required:** Yes
+  - **Minimum:** 0
+  - **Error messages:**
+    - Required: "El precio es obligatorio"
+    - Minimum: "El precio no puede ser negativo"
+  
+  ```json
+  "precio": 45.00
+  ```
+</ParamField>
+
+<ParamField path="descuento" type="Number">
+  Discount percentage applied to the base price
+  
+  - **Required:** No
+  - **Default:** 0
+  - **Minimum:** 0
+  - **Maximum:** 100
+  - **Error messages:**
+    - Minimum: "El descuento no puede ser negativo"
+    - Maximum: "El descuento no puede superar el 100%"
+  
+  ```json
+  "descuento": 20
+  ```
+  
+  <Note>
+  A discount of 20 means 20% off the base price. The frontend calculates the final price as: `precio * (1 - descuento / 100)`
+  </Note>
+</ParamField>
+
+<ParamField path="descripcion" type="String" required>
+  Detailed description of the service offering
+  
+  - **Required:** Yes
+  - **Max length:** 500 characters
+  - **Transform:** `trim` removes leading/trailing whitespace
+  - **Error messages:**
+    - Required: "La descripción es obligatoria"
+    - Max length: "La descripción no puede exceder 500 caracteres"
+  
+  ```json
+  "descripcion": "Acceso completo a Netflix Premium con 4 pantallas simultáneas y resolución 4K Ultra HD"
+  ```
+</ParamField>
+
+<ParamField path="createdAt" type="Date">
+  Timestamp when the service was created
+  
+  - **Auto-generated:** Yes (via `timestamps: true`)
+  - **Format:** ISO 8601 date string
+  
+  ```json
+  "createdAt": "2026-03-13T10:30:45.123Z"
+  ```
+</ParamField>
+
+<ParamField path="updatedAt" type="Date">
+  Timestamp when the service was last modified
+  
+  - **Auto-generated:** Yes (via `timestamps: true`)
+  - **Auto-updated:** Yes (updates on every save)
+  - **Format:** ISO 8601 date string
+  
+  ```json
+  "updatedAt": "2026-03-13T14:22:10.456Z"
+  ```
+</ParamField>
+
+<ParamField path="_id" type="ObjectId">
+  MongoDB unique identifier
+  
+  - **Auto-generated:** Yes
+  - **Type:** MongoDB ObjectId
+  - **Immutable:** Cannot be changed after creation
+  
+  ```json
+  "_id": "507f1f77bcf86cd799439011"
+  ```
+</ParamField>
+
+<ParamField path="__v" type="Number">
+  Version key for optimistic concurrency control
+  
+  - **Auto-generated:** Yes (by Mongoose)
+  - **Purpose:** Tracks document version for conflict detection
+  
+  ```json
+  "__v": 0
+  ```
+</ParamField>
+
+## Field Constraints Summary
+
+| Field | Type | Required | Min | Max | Default |
+|-------|------|----------|-----|-----|---------|
+| `imagen` | String | ✅ | - | - | - |
+| `titulo` | String | ✅ | - | 120 chars | - |
+| `precio` | Number | ✅ | 0 | - | - |
+| `descuento` | Number | ❌ | 0 | 100 | 0 |
+| `descripcion` | String | ✅ | - | 500 chars | - |
+| `createdAt` | Date | Auto | - | - | Current time |
+| `updatedAt` | Date | Auto | - | - | Current time |
+
+## Example Service Document
+
+Here's a complete example of a service document as stored in MongoDB:
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://cdn.example.com/images/netflix-premium.png",
+  "titulo": "Netflix Premium 4K",
+  "precio": 45.00,
+  "descuento": 20,
+  "descripcion": "Acceso completo a Netflix Premium con 4 pantallas simultáneas, resolución 4K Ultra HD y audio espacial. Incluye todo el catálogo de películas y series.",
+  "createdAt": "2026-03-13T10:30:45.123Z",
+  "updatedAt": "2026-03-13T14:22:10.456Z",
+  "__v": 0
+}
+```
+
+### Calculated Final Price
+
+The frontend automatically calculates the discounted price:
+
+```javascript
+const precioFinal = descuento > 0 
+  ? (precio * (1 - descuento / 100)).toFixed(2)
+  : precio.toFixed(2);
+
+// Example: 45.00 * (1 - 20/100) = 36.00
+```
+
+## Timestamps
+
+The schema includes automatic timestamp management through the `timestamps: true` option:
+
+```javascript
+{
+  timestamps: true
+}
+```
+
+This adds two fields to every document:
+
+<CardGroup cols={2}>
+  <Card title="createdAt" icon="clock">
+    Set once when the document is first created. Never changes after creation.
+  </Card>
+  
+  <Card title="updatedAt" icon="arrows-rotate">
+    Automatically updated to the current time whenever the document is modified using `save()` or `findByIdAndUpdate()`.
+  </Card>
+</CardGroup>
+
+### Timestamp Behavior
+
+```javascript
+// Create new service
+const service = await Service.create({ /* data */ });
+// createdAt: 2026-03-13T10:30:45.123Z
+// updatedAt: 2026-03-13T10:30:45.123Z (same as createdAt)
+
+// Update service
+await Service.findByIdAndUpdate(id, { precio: 50 });
+// createdAt: 2026-03-13T10:30:45.123Z (unchanged)
+// updatedAt: 2026-03-13T14:22:10.456Z (updated)
+```
+
+## Validation Rules
+
+Mongoose automatically validates all fields before saving to the database:
+
+### Required Field Validation
+
+```javascript
+// Missing required field
+await Service.create({ titulo: 'Netflix' }); 
+// Error: Service validation failed: imagen: La URL de la imagen es obligatoria
+```
+
+### Length Validation
+
+```javascript
+// Title too long
+await Service.create({
+  imagen: 'url',
+  titulo: 'a'.repeat(121), // 121 characters
+  precio: 45,
+  descripcion: 'desc'
+});
+// Error: El título no puede exceder 120 caracteres
+```
+
+### Range Validation
+
+```javascript
+// Negative price
+await Service.create({
+  imagen: 'url',
+  titulo: 'Netflix',
+  precio: -10, // Invalid
+  descripcion: 'desc'
+});
+// Error: El precio no puede ser negativo
+
+// Discount over 100%
+await Service.create({
+  imagen: 'url',
+  titulo: 'Netflix',
+  precio: 45,
+  descuento: 150, // Invalid
+  descripcion: 'desc'
+});
+// Error: El descuento no puede superar el 100%
+```
+
+## Schema Options
+
+The schema uses several Mongoose features for data quality:
+
+<Accordion title="trim">
+  Automatically removes leading and trailing whitespace from string fields before saving.
+  
+  ```javascript
+  { titulo: '  Netflix Premium  ' } // Saved as: 'Netflix Premium'
+  ```
+</Accordion>
+
+<Accordion title="required">
+  Validates that a field has a value before saving. Accepts an array with a custom error message.
+  
+  ```javascript
+  required: [true, 'El título del servicio es obligatorio']
+  ```
+</Accordion>
+
+<Accordion title="default">
+  Sets a default value if the field is not provided during creation.
+  
+  ```javascript
+  default: 0 // If descuento is omitted, it defaults to 0
+  ```
+</Accordion>
+
+<Accordion title="min / max">
+  Validates number ranges. Accepts an array with the value and custom error message.
+  
+  ```javascript
+  min: [0, 'El precio no puede ser negativo']
+  max: [100, 'El descuento no puede superar el 100%']
+  ```
+</Accordion>
+
+<Accordion title="maxlength">
+  Validates string length. Accepts an array with the maximum length and custom error message.
+  
+  ```javascript
+  maxlength: [120, 'El título no puede exceder 120 caracteres']
+  ```
+</Accordion>
+
+<Note>
+All validation occurs automatically when using `Service.create()`, `service.save()`, or `Service.findByIdAndUpdate()` with `runValidators: true`.
+</Note>
+
+## Working with the Model
+
+### Import and Use
+
+```javascript
+import Service from '../models/Service.js';
+
+// Create
+const service = await Service.create({
+  imagen: 'https://example.com/logo.png',
+  titulo: 'Spotify Premium',
+  precio: 19.90,
+  descuento: 10,
+  descripcion: 'Música sin límites'
+});
+
+// Find all
+const services = await Service.find().sort({ createdAt: -1 });
+
+// Find by ID
+const service = await Service.findById('507f1f77bcf86cd799439011');
+
+// Update
+const updated = await Service.findByIdAndUpdate(
+  id, 
+  { precio: 25.00 }, 
+  { new: true, runValidators: true }
+);
+
+// Delete
+await Service.findByIdAndDelete(id);
+```

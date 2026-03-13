@@ -1,0 +1,367 @@
+---
+title: 'Service Management'
+description: 'Managing streaming services through the API'
+---
+
+The service management system provides a RESTful API for performing CRUD operations on streaming services. All operations are handled through the `serviceController.js` controller with built-in validation and error handling.
+
+## API Operations
+
+<Accordion title="GET - Retrieve All Services">
+  
+### Get All Services
+
+Fetches all services from the database, sorted by creation date (newest first).
+
+**Endpoint:** `GET /api/services`
+
+**Controller Implementation:**
+
+```javascript
+export const getServices = async (_req, res) => {
+  try {
+    const services = await Service.find().sort({ createdAt: -1 });
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error al obtener los servicios', 
+      error: error.message 
+    });
+  }
+};
+```
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "_id": "507f1f77bcf86cd799439011",
+    "imagen": "https://example.com/netflix.png",
+    "titulo": "Netflix Premium",
+    "precio": 45.00,
+    "descuento": 20,
+    "descripcion": "Acceso completo a Netflix Premium con 4 pantallas simultáneas",
+    "createdAt": "2026-03-13T10:30:00.000Z",
+    "updatedAt": "2026-03-13T10:30:00.000Z"
+  }
+]
+```
+
+**Error Response (500):**
+
+```json
+{
+  "message": "Error al obtener los servicios",
+  "error": "Connection timeout"
+}
+```
+
+</Accordion>
+
+<Accordion title="GET - Retrieve Service by ID">
+
+### Get Service by ID
+
+Fetches a single service by its MongoDB ObjectId.
+
+**Endpoint:** `GET /api/services/:id`
+
+**Controller Implementation:**
+
+```javascript
+export const getServiceById = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ message: 'Servicio no encontrado' });
+    }
+    res.json(service);
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error al obtener el servicio', 
+      error: error.message 
+    });
+  }
+};
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://example.com/netflix.png",
+  "titulo": "Netflix Premium",
+  "precio": 45.00,
+  "descuento": 20,
+  "descripcion": "Acceso completo a Netflix Premium",
+  "createdAt": "2026-03-13T10:30:00.000Z",
+  "updatedAt": "2026-03-13T10:30:00.000Z"
+}
+```
+
+**Error Responses:**
+
+- **404 Not Found:** Service with the specified ID doesn't exist
+- **500 Internal Server Error:** Database error or invalid ID format
+
+</Accordion>
+
+<Accordion title="POST - Create New Service">
+
+### Create New Service
+
+Creates a new streaming service with validation.
+
+**Endpoint:** `POST /api/services`
+
+**Controller Implementation:**
+
+```javascript
+export const createService = async (req, res) => {
+  try {
+    const service = await Service.create(req.body);
+    res.status(201).json(service);
+  } catch (error) {
+    res.status(400).json({ 
+      message: 'Error al crear el servicio', 
+      error: error.message 
+    });
+  }
+};
+```
+
+**Request Body:**
+
+```json
+{
+  "imagen": "https://example.com/spotify.png",
+  "titulo": "Spotify Premium",
+  "precio": 19.90,
+  "descuento": 10,
+  "descripcion": "Música sin límites, sin anuncios"
+}
+```
+
+**Response (201 Created):**
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439012",
+  "imagen": "https://example.com/spotify.png",
+  "titulo": "Spotify Premium",
+  "precio": 19.90,
+  "descuento": 10,
+  "descripcion": "Música sin límites, sin anuncios",
+  "createdAt": "2026-03-13T11:00:00.000Z",
+  "updatedAt": "2026-03-13T11:00:00.000Z"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "message": "Error al crear el servicio",
+  "error": "Service validation failed: titulo: El título del servicio es obligatorio"
+}
+```
+
+</Accordion>
+
+<Accordion title="PUT - Update Service">
+
+### Update Service
+
+Updates an existing service with validation.
+
+**Endpoint:** `PUT /api/services/:id`
+
+**Controller Implementation:**
+
+```javascript
+export const updateService = async (req, res) => {
+  try {
+    const service = await Service.findByIdAndUpdate(
+      req.params.id, 
+      req.body, 
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+    if (!service) {
+      return res.status(404).json({ message: 'Servicio no encontrado' });
+    }
+    res.json(service);
+  } catch (error) {
+    res.status(400).json({ 
+      message: 'Error al actualizar el servicio', 
+      error: error.message 
+    });
+  }
+};
+```
+
+**Key Options:**
+
+- `new: true` - Returns the updated document instead of the original
+- `runValidators: true` - Ensures schema validation runs on update
+
+**Request Body (partial update):**
+
+```json
+{
+  "precio": 39.90,
+  "descuento": 25
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://example.com/netflix.png",
+  "titulo": "Netflix Premium",
+  "precio": 39.90,
+  "descuento": 25,
+  "descripcion": "Acceso completo a Netflix Premium",
+  "createdAt": "2026-03-13T10:30:00.000Z",
+  "updatedAt": "2026-03-13T12:15:00.000Z"
+}
+```
+
+**Error Responses:**
+
+- **404 Not Found:** Service doesn't exist
+- **400 Bad Request:** Validation failed
+
+</Accordion>
+
+<Accordion title="DELETE - Remove Service">
+
+### Delete Service
+
+Permanently removes a service from the database.
+
+**Endpoint:** `DELETE /api/services/:id`
+
+**Controller Implementation:**
+
+```javascript
+export const deleteService = async (req, res) => {
+  try {
+    const service = await Service.findByIdAndDelete(req.params.id);
+    if (!service) {
+      return res.status(404).json({ message: 'Servicio no encontrado' });
+    }
+    res.json({ message: 'Servicio eliminado correctamente' });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error al eliminar el servicio', 
+      error: error.message 
+    });
+  }
+};
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Servicio eliminado correctamente"
+}
+```
+
+**Error Responses:**
+
+- **404 Not Found:** Service doesn't exist
+- **500 Internal Server Error:** Database error
+
+</Accordion>
+
+## Validation Logic
+
+All operations that create or modify services automatically trigger Mongoose schema validation defined in the Service model:
+
+<CardGroup cols={2}>
+  <Card title="Required Fields" icon="asterisk">
+    - Image URL (`imagen`)
+    - Title (`titulo`)
+    - Price (`precio`)
+    - Description (`descripcion`)
+  </Card>
+  
+  <Card title="Constraints" icon="ruler">
+    - Title max 120 characters
+    - Description max 500 characters
+    - Price minimum 0
+    - Discount 0-100%
+  </Card>
+</CardGroup>
+
+## Error Handling Patterns
+
+The controller uses consistent error handling across all operations:
+
+```javascript
+try {
+  // Operation logic
+} catch (error) {
+  res.status(statusCode).json({ 
+    message: 'User-friendly error message',
+    error: error.message 
+  });
+}
+```
+
+### HTTP Status Codes
+
+| Status | Usage |
+|--------|-------|
+| **200** | Successful GET, PUT, DELETE |
+| **201** | Successful POST (resource created) |
+| **400** | Validation error or bad request |
+| **404** | Service not found |
+| **500** | Server or database error |
+
+## Workflow Example
+
+Here's a typical workflow for managing services:
+
+```javascript
+// 1. Fetch all services
+const response = await fetch('/api/services');
+const services = await response.json();
+
+// 2. Create a new service
+const newService = await fetch('/api/services', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    imagen: 'https://example.com/hbo.png',
+    titulo: 'HBO Max',
+    precio: 35.00,
+    descuento: 15,
+    descripcion: 'Todo el contenido de HBO y Warner'
+  })
+});
+
+// 3. Update the service
+const updated = await fetch(`/api/services/${newService._id}`, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ descuento: 20 })
+});
+
+// 4. Delete the service
+await fetch(`/api/services/${newService._id}`, {
+  method: 'DELETE'
+});
+```
+
+<Note>
+The controller automatically handles sorting by creation date in descending order, so the newest services always appear first when fetching all services.
+</Note>

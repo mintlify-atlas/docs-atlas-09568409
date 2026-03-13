@@ -1,0 +1,716 @@
+---
+title: "Installation"
+description: "Complete installation guide for Astro Services in all environments"
+---
+
+This guide provides comprehensive instructions for installing and configuring Astro Services in various environments.
+
+## System Requirements
+
+<CardGroup cols={3}>
+  <Card title="Node.js" icon="node-js">
+    **Version 18+**
+    
+    Required for both frontend and backend
+  </Card>
+  <Card title="MongoDB" icon="database">
+    **Atlas or Local**
+    
+    MongoDB 7.0+ recommended
+  </Card>
+  <Card title="Memory" icon="memory">
+    **2GB RAM minimum**
+    
+    4GB recommended for development
+  </Card>
+</CardGroup>
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Local Development">
+    ### Local Installation
+
+    Perfect for development and testing on your local machine.
+
+    <Steps>
+      <Step title="Clone the Repository">
+        ```bash
+        git clone https://github.com/luisllatas-dev/proyecto_streaming.git
+        cd Proyecto_Astro
+        ```
+      </Step>
+
+      <Step title="Backend Setup">
+        Navigate to the backend directory and install dependencies:
+
+        <CodeGroup>
+          ```bash npm
+          cd astro_backend
+          npm install
+          ```
+
+          ```bash yarn
+          cd astro_backend
+          yarn install
+          ```
+
+          ```bash pnpm
+          cd astro_backend
+          pnpm install
+          ```
+        </CodeGroup>
+
+        **Key Backend Dependencies:**
+        - `express` v4.21.2 - Web framework
+        - `mongoose` v8.9.5 - MongoDB ODM
+        - `cors` v2.8.5 - Cross-origin resource sharing
+        - `dotenv` v16.4.7 - Environment configuration
+      </Step>
+
+      <Step title="Configure Backend Environment">
+        Create a `.env` file in the `astro_backend` directory:
+
+        ```bash
+        touch astro_backend/.env
+        ```
+
+        Add the following configuration:
+
+        ```env astro_backend/.env
+        # Server Configuration
+        PORT=5000
+
+        # MongoDB Atlas Connection
+        MONGODB_URI=mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/astroservicesdb
+        ```
+
+        <Warning>
+          **Security Notice**: Never commit your `.env` file to version control. It should already be in `.gitignore`.
+        </Warning>
+
+        ### MongoDB Atlas Setup
+
+        1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/atlas)
+        2. Create a new cluster (M0 free tier is sufficient)
+        3. Create a database user (Database Access → Add New Database User)
+        4. Whitelist your IP address (Network Access → Add IP Address)
+        5. Get your connection string (Connect → Connect your application)
+
+        Your connection string should look like:
+        ```
+        mongodb+srv://myuser:mypassword@cluster0.abc123.mongodb.net/astroservicesdb
+        ```
+
+        <Note>
+          The database name `astroservicesdb` will be created automatically when you first connect.
+        </Note>
+      </Step>
+
+      <Step title="Start Backend Server">
+        Launch the backend in development mode with auto-reload:
+
+        <CodeGroup>
+          ```bash npm
+          npm run dev
+          ```
+
+          ```bash yarn
+          yarn dev
+          ```
+
+          ```bash pnpm
+          pnpm dev
+          ```
+        </CodeGroup>
+
+        **Available Scripts:**
+        - `npm run dev` - Start with hot reload using Node's `--watch` flag
+        - `npm start` - Start in production mode
+        - `npm run seed` - Populate database with sample data
+        - `npm test` - Run test suite with Vitest
+        - `npm run test:coverage` - Run tests with coverage report
+
+        Expected output:
+        ```
+        MongoDB conectado: cluster0.abc123.mongodb.net
+        Servidor corriendo en http://localhost:5000
+        ```
+      </Step>
+
+      <Step title="Seed the Database">
+        In a new terminal window, populate the database with sample services:
+
+        <CodeGroup>
+          ```bash npm
+          cd astro_backend
+          npm run seed
+          ```
+
+          ```bash yarn
+          cd astro_backend
+          yarn seed
+          ```
+
+          ```bash pnpm
+          cd astro_backend
+          pnpm seed
+          ```
+        </CodeGroup>
+
+        This script (`src/seed.js`):
+        - Connects to MongoDB
+        - Clears existing services
+        - Inserts 6 sample services:
+          - Netflix Premium (4K, $5.99, 20% discount)
+          - Disney+ Premium (4K HDR, $4.99, 15% discount)
+          - HBO Max ($5.49, 10% discount)
+          - Spotify Premium ($3.49, no discount)
+          - IPTV Full HD (5000+ channels, $8.99, 25% discount)
+          - Amazon Prime Video (4K, $4.49, 5% discount)
+
+        Expected output:
+        ```
+        MongoDB conectado para seeding...
+        Colección de servicios limpiada.
+        6 servicios insertados correctamente.
+        Conexión cerrada. Seed completado.
+        ```
+      </Step>
+
+      <Step title="Frontend Setup">
+        Open a new terminal, navigate to the frontend directory, and install dependencies:
+
+        <CodeGroup>
+          ```bash npm
+          cd astro_services
+          npm install
+          ```
+
+          ```bash yarn
+          cd astro_services
+          yarn install
+          ```
+
+          ```bash pnpm
+          cd astro_services
+          pnpm install
+          ```
+        </CodeGroup>
+
+        **Key Frontend Dependencies:**
+        - `react` v19.2.0 - UI library
+        - `react-dom` v19.2.0 - React DOM renderer
+        - `vite` v7.3.1 - Build tool and dev server
+        - `tailwindcss` v4.2.1 - Utility-first CSS framework
+        - `@tailwindcss/vite` v4.2.1 - Tailwind Vite plugin
+      </Step>
+
+      <Step title="Configure Frontend Environment (Optional)">
+        By default, the frontend connects to `http://localhost:5000/api` in development.
+
+        To customize the API URL, create a `.env` file in `astro_services`:
+
+        ```env astro_services/.env
+        # API Configuration (optional)
+        VITE_API_URL=http://localhost:5000/api
+        ```
+
+        <Note>
+          The frontend automatically detects the environment. In development, it uses `http://localhost:5000/api`. In production, it uses `/api` for serverless functions.
+        </Note>
+      </Step>
+
+      <Step title="Start Frontend Application">
+        Launch the React application with Vite:
+
+        <CodeGroup>
+          ```bash npm
+          npm run dev
+          ```
+
+          ```bash yarn
+          yarn dev
+          ```
+
+          ```bash pnpm
+          pnpm dev
+          ```
+        </CodeGroup>
+
+        **Available Scripts:**
+        - `npm run dev` - Start development server
+        - `npm run build` - Build for production
+        - `npm run preview` - Preview production build locally
+        - `npm run lint` - Run ESLint
+        - `npm test` - Run test suite with Vitest
+        - `npm run test:coverage` - Run tests with coverage report
+
+        The application will be available at:
+        ```
+        http://localhost:5173
+        ```
+      </Step>
+
+      <Step title="Verify Installation">
+        Open your browser and test:
+
+        1. **Frontend**: Visit `http://localhost:5173`
+           - Should display a grid of 6 service cards
+           - Each card shows image, title, price with discount, and description
+
+        2. **Backend API**: Test the health endpoint
+           ```bash
+           curl http://localhost:5000/api/health
+           ```
+
+        3. **Fetch Services**: Get all services via API
+           ```bash
+           curl http://localhost:5000/api/services
+           ```
+
+        You should receive a JSON array with all 6 services.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Docker">
+    ### Docker Installation
+
+    Use Docker Compose to run the entire stack with a single command.
+
+    <Steps>
+      <Step title="Prerequisites">
+        Install Docker and Docker Compose:
+        - [Docker Desktop](https://www.docker.com/products/docker-desktop) (includes Docker Compose)
+        - Or install [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/) separately
+      </Step>
+
+      <Step title="Clone Repository">
+        ```bash
+        git clone https://github.com/luisllatas-dev/proyecto_streaming.git
+        cd Proyecto_Astro
+        ```
+      </Step>
+
+      <Step title="Configure Backend Environment">
+        The `docker-compose.yml` already includes MongoDB configuration, but you can customize it.
+
+        **Default Docker Configuration:**
+        ```yaml
+        services:
+          mongo:
+            image: mongo:7
+            ports:
+              - '27017:27017'
+          
+          backend:
+            environment:
+              - PORT=5000
+              - MONGODB_URI=mongodb://mongo:27017/astro_services
+          
+          frontend:
+            ports:
+              - '80:80'
+        ```
+
+        <Note>
+          With Docker, you use a local MongoDB container instead of MongoDB Atlas. The connection string `mongodb://mongo:27017/astro_services` is already configured.
+        </Note>
+      </Step>
+
+      <Step title="Build and Start Services">
+        Launch all services with a single command:
+
+        ```bash
+        docker-compose up --build
+        ```
+
+        This command:
+        - Builds the backend image from `astro_backend/Dockerfile`
+        - Builds the frontend image from `astro_services/Dockerfile`
+        - Pulls MongoDB 7 image
+        - Creates a Docker network for service communication
+        - Starts all three containers
+
+        **Running Services:**
+        - `astro_mongo` - MongoDB on port 27017
+        - `astro_backend` - API on port 5000
+        - `astro_frontend` - Web app on port 80
+      </Step>
+
+      <Step title="Seed the Database">
+        Once the containers are running, seed the database in a new terminal:
+
+        ```bash
+        docker exec -it astro_backend npm run seed
+        ```
+
+        Or access the backend container and run the seed script:
+
+        ```bash
+        docker exec -it astro_backend sh
+        npm run seed
+        exit
+        ```
+      </Step>
+
+      <Step title="Access the Application">
+        Open your browser and navigate to:
+
+        ```
+        http://localhost
+        ```
+
+        The frontend is served on port 80, so no port number is needed.
+
+        API is available at:
+        ```
+        http://localhost:5000/api
+        ```
+      </Step>
+
+      <Step title="Stop the Services">
+        To stop all containers:
+
+        ```bash
+        docker-compose down
+        ```
+
+        To stop and remove volumes (including MongoDB data):
+
+        ```bash
+        docker-compose down -v
+        ```
+
+        <Warning>
+          Using `-v` flag will delete all database data. Only use this if you want to start fresh.
+        </Warning>
+      </Step>
+    </Steps>
+
+    ### Docker Useful Commands
+
+    ```bash
+    # Start services in detached mode
+    docker-compose up -d
+
+    # View logs
+    docker-compose logs -f
+
+    # View logs for specific service
+    docker-compose logs -f backend
+
+    # Restart a service
+    docker-compose restart backend
+
+    # Stop services
+    docker-compose stop
+
+    # Remove containers
+    docker-compose down
+
+    # Rebuild a specific service
+    docker-compose up -d --build backend
+    ```
+  </Tab>
+</Tabs>
+
+## Environment Variables Reference
+
+### Backend Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `5000` | Port for the Express server |
+| `MONGODB_URI` | Yes | - | MongoDB connection string (Atlas or local) |
+
+**Example configurations:**
+
+```env MongoDB Atlas (Production)
+PORT=5000
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/astroservicesdb
+```
+
+```env Local MongoDB
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/astro_services
+```
+
+```env Docker MongoDB
+PORT=5000
+MONGODB_URI=mongodb://mongo:27017/astro_services
+```
+
+### Frontend Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_URL` | No | Auto-detected | Backend API base URL |
+
+**Auto-detection logic** (from `src/services/api.js:3`):
+```javascript
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+```
+
+- **Development**: Uses `http://localhost:5000/api`
+- **Production**: Uses `/api` (for serverless deployments)
+- **Custom**: Set `VITE_API_URL` to override
+
+## Database Schema
+
+The application uses a single `Service` model with the following structure:
+
+| Field | Type | Validation | Description |
+|-------|------|------------|-------------|
+| `imagen` | String | Required | URL of the service image |
+| `titulo` | String | Required, max 120 chars | Service name or plan title |
+| `precio` | Number | Required, min 0 | Service price (numeric value) |
+| `descuento` | Number | Default 0, range 0-100 | Discount percentage |
+| `descripcion` | String | Required, max 500 chars | Service benefits and features |
+
+**Example Service Document:**
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "imagen": "https://images.unsplash.com/photo-1611162617474-5b21e879e113",
+  "titulo": "Netflix Premium",
+  "precio": 5.99,
+  "descuento": 20,
+  "descripcion": "Pantalla completa en 4K Ultra HD. Acceso a todo el catálogo sin restricciones. Hasta 4 dispositivos simultáneos.",
+  "createdAt": "2026-03-13T10:30:00.000Z",
+  "updatedAt": "2026-03-13T10:30:00.000Z"
+}
+```
+
+## Verification Steps
+
+After installation, verify your setup with these tests:
+
+<Steps>
+  <Step title="Backend Health Check">
+    ```bash
+    curl http://localhost:5000/api/health
+    ```
+
+    Expected response:
+    ```json
+    {
+      "status": "ok",
+      "timestamp": "2026-03-13T10:30:00.000Z"
+    }
+    ```
+  </Step>
+
+  <Step title="Fetch All Services">
+    ```bash
+    curl http://localhost:5000/api/services
+    ```
+
+    Should return an array of 6 services (after seeding).
+  </Step>
+
+  <Step title="Fetch Single Service">
+    ```bash
+    curl http://localhost:5000/api/services/<service-id>
+    ```
+
+    Replace `<service-id>` with an actual ID from the services list.
+  </Step>
+
+  <Step title="Frontend Loading">
+    Visit `http://localhost:5173` (or `http://localhost` for Docker) and verify:
+    - Page loads without errors
+    - Service cards are displayed in a grid
+    - Images load correctly
+    - Prices and discounts are calculated properly
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="MongoDB Connection Failed">
+    **Error:** `Error de conexión a MongoDB: connect ECONNREFUSED`
+
+    **Solutions:**
+    1. **For MongoDB Atlas:**
+       - Verify your connection string in `.env` is correct
+       - Check that your IP address is whitelisted (Network Access in Atlas)
+       - Ensure database user credentials are correct
+       - Confirm the cluster is running and not paused
+
+    2. **For Local MongoDB:**
+       - Ensure MongoDB service is running: `mongod`
+       - Check MongoDB is listening on port 27017
+       - Verify connection string: `mongodb://localhost:27017/astro_services`
+
+    3. **For Docker:**
+       - Ensure `mongo` container is running: `docker ps`
+       - Check container logs: `docker-compose logs mongo`
+       - Use the Docker network name: `mongodb://mongo:27017/astro_services`
+
+    **DNS Resolution Issues:**
+    
+    The backend includes DNS resolver configuration to fix MongoDB Atlas SRV issues:
+    ```javascript
+    // From src/config/db.js:1
+    import dns from 'node:dns';
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+    ```
+  </Accordion>
+
+  <Accordion title="Port Already in Use">
+    **Error:** `EADDRINUSE: address already in use :::5000`
+
+    **Solutions:**
+    1. Find the process using the port:
+       ```bash
+       # On macOS/Linux
+       lsof -i :5000
+       
+       # On Windows
+       netstat -ano | findstr :5000
+       ```
+
+    2. Kill the process or change the port in `.env`:
+       ```env
+       PORT=5001
+       ```
+
+    3. Update frontend API URL if you change the backend port:
+       ```env
+       VITE_API_URL=http://localhost:5001/api
+       ```
+  </Accordion>
+
+  <Accordion title="Frontend Can't Connect to Backend">
+    **Error:** `Failed to fetch` or CORS errors in browser console
+
+    **Solutions:**
+    1. Verify backend is running: `curl http://localhost:5000/api/health`
+    2. Check CORS is enabled (it's configured by default in the backend)
+    3. Ensure no firewall is blocking port 5000
+    4. Verify API URL in `astro_services/src/services/api.js:3`
+    5. Check browser console for specific error messages
+
+    **CORS Configuration:**
+    The backend has CORS enabled for all origins in development. Check `app.js` for configuration.
+  </Accordion>
+
+  <Accordion title="Seed Script Fails">
+    **Error:** During `npm run seed`
+
+    **Solutions:**
+    1. Ensure `.env` file exists with valid `MONGODB_URI`
+    2. Test MongoDB connection by starting the backend first
+    3. Check MongoDB Atlas cluster is not paused
+    4. Verify database user has write permissions
+    5. Check network connectivity
+
+    **Manual Verification:**
+    ```bash
+    # Start backend to test connection
+    cd astro_backend
+    npm run dev
+    
+    # If connection works, try seeding again
+    npm run seed
+    ```
+  </Accordion>
+
+  <Accordion title="Docker Build Fails">
+    **Error:** During `docker-compose up --build`
+
+    **Solutions:**
+    1. Ensure Docker daemon is running
+    2. Check Dockerfile syntax in both `astro_backend/` and `astro_services/`
+    3. Verify you have enough disk space
+    4. Try cleaning Docker cache:
+       ```bash
+       docker system prune -a
+       docker-compose build --no-cache
+       ```
+
+    5. Check for port conflicts:
+       ```bash
+       docker ps -a
+       ```
+  </Accordion>
+
+  <Accordion title="npm install Fails">
+    **Error:** During dependency installation
+
+    **Solutions:**
+    1. Clear npm cache:
+       ```bash
+       npm cache clean --force
+       ```
+
+    2. Delete `node_modules` and `package-lock.json`:
+       ```bash
+       rm -rf node_modules package-lock.json
+       npm install
+       ```
+
+    3. Use a different package manager:
+       ```bash
+       yarn install
+       # or
+       pnpm install
+       ```
+
+    4. Check Node.js version:
+       ```bash
+       node --version  # Should be v18+
+       ```
+
+    5. Update npm:
+       ```bash
+       npm install -g npm@latest
+       ```
+  </Accordion>
+
+  <Accordion title="Vite Dev Server Won't Start">
+    **Error:** Frontend development server fails to start
+
+    **Solutions:**
+    1. Check port 5173 is not in use
+    2. Verify Node.js version is 18 or higher
+    3. Clear Vite cache:
+       ```bash
+       rm -rf node_modules/.vite
+       npm run dev
+       ```
+
+    4. Check for syntax errors in `vite.config.js`
+    5. Ensure all dependencies installed correctly
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore all REST endpoints and examples
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Learn about the application structure
+  </Card>
+  <Card title="Development" icon="laptop-code" href="/development">
+    Contributing and development guidelines
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/deployment">
+    Deploy to production environments
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+- [MongoDB Atlas Documentation](https://www.mongodb.com/docs/atlas/)
+- [Express.js Guide](https://expressjs.com/en/guide/routing.html)
+- [React Documentation](https://react.dev/)
+- [Vite Documentation](https://vitejs.dev/)
+- [Tailwind CSS](https://tailwindcss.com/docs)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
